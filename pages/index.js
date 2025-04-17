@@ -1,10 +1,6 @@
-// pages/index.js or app/page.js
-
 import { fetchPosts } from '../lib/api';
 
-export default async function HomePage() {
-  const posts = await fetchPosts();
-
+export default function HomePage({ posts }) {
   return (
     <div>
       <h1>Latest Posts</h1>
@@ -15,4 +11,13 @@ export default async function HomePage() {
       </ul>
     </div>
   );
+}
+
+export async function getStaticProps() {
+  const posts = await fetchPosts();
+  return {
+    props: {
+      posts,
+    },
+  };
 }
