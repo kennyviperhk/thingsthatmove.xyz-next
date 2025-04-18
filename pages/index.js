@@ -1,23 +1,14 @@
-import { fetchPosts } from '../lib/api';
 
-export default function HomePage({ posts }) {
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import LandingAnimation from '../components/LandingAnimation';
+
+export default function Home() {
   return (
-    <div>
-      <h1>Latest Posts</h1>
-      <ul>
-        {posts.map(post => (
-          <li key={post.id}>{post.title.rendered}</li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <Header />
+      <LandingAnimation />
+      <Footer />
+    </>
   );
-}
-
-export async function getStaticProps() {
-  const posts = await fetchPosts();
-  return {
-    props: {
-      posts,
-    },
-  };
 }
