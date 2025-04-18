@@ -29,7 +29,24 @@ export interface Page extends WPBase {
   parent: number;
 }
 
-export interface CustomPost extends WPBase {
-  type: 'projects' | 'landings';
-  acf?: Record<string, any>; // For custom fields
+export interface CustomPost {
+  id: number;
+  title: {
+    rendered: string;
+  };
+  content: {
+    rendered: string;
+  };
+  excerpt?: {
+    rendered: string;
+  };
+  slug: string;
+  type: string;
+  date: string;
+  modified: string;
+  featured_media: number;
+  _embedded?: any;
+  acf?: {
+    [key: string]: any;
+  };
 } 

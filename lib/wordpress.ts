@@ -57,6 +57,36 @@ export const fetchPost = async (slug: string, type: string = 'posts') => {
   }
 };
 
+export const getPageBySlug = async (slug: string) => {
+  try {
+    const { data } = await api.get('/wp/v2/pages', {
+      params: {
+        slug,
+        _embed: true,
+      },
+    });
+    return data[0];
+  } catch (error) {
+    console.error('Error fetching page:', error);
+    return null;
+  }
+};
+
+export const getLandings = async () => {
+  try {
+    const { data } = await api.get('/wp/v2/landings', {
+      params: {
+        _embed: true,
+        per_page: 100,
+      },
+    });
+    return data;
+  } catch (error) {
+    console.error('Error fetching landings:', error);
+    return [];
+  }
+};
+
 export const fetchLanding = async (slug: string) => {
   return fetchPost(slug, 'landings');
 };
