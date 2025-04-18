@@ -1,49 +1,66 @@
-import { Post, Page, CustomPost } from './types';
+import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://blog.thingsthatmove.xyz/wp-json';
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_WORDPRESS_API_URL,
+});
 
-async function fetchAPI(endpoint: string, params: Record<string, string> = {}) {
-  const queryString = new URLSearchParams(params).toString();
-  const url = `${API_URL}${endpoint}${queryString ? '?' + queryString : ''}`;
-  
-  const res = await fetch(url);
-  
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url}`);
+export interface Post {
+  id: number;
+  title: {
+    rendered: string;
+  };
+  content: {
+    rendered: string;
+  };
+  slug: string;
+  type: string;
+  date: string;
+  modified: string;
+  featured_media: number;
+  _embedded?: any;
+}
+
+export interface Landing extends Post {
+  acf: {
+    [key: string]: any;
+  };
+}
+
+export const fetchPosts = async (type: string = 'posts', params: object = {}) => {
+  try {
+    const { data } = await api.get(`/wp/v2/${type}`, {
+      params: {
+        _embed: true,
+        per_page: 50,
+        ...params,
+      },
+    });
+    return data;
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    return [];
   }
-  
-  return res.json();
-}
+};
 
-export async function getPosts(page = 1, perPage = 50) {
-  return fetchAPI('/wp/v2/posts', {
-    page: page.toString(),
-    per_page: perPage.toString(),
-  });
-}
+export const fetchPost = async (slug: string, type: string = 'posts') => {
+  try {
+    const { data } = await api.get(`/wp/v2/${type}`, {
+      params: {
+        slug,
+        _embed: true,
+      },
+    });
+    return data[0];
+  } catch (error) {
+    console.error('Error fetching post:', error);
+    return null;
+  }
+};
 
-export async function getPages() {
-  return fetchAPI('/wp/v2/pages');
-}
+export const fetchLanding = async (slug: string) => {
+  return fetchPost(slug, 'landings');
+};
 
-export async function getProjects() {
-  return fetchAPI('/wp/v2/projects');
-}
-
-export async function getLandings() {
-  return fetchAPI('/wp/v2/landings');
-}
-
-export async function getPostBySlug(slug: string) {
-  const posts = await fetchAPI('/wp/v2/posts', {
-    slug,
-  });
-  return posts[0];
-}
-
-export async function getPageBySlug(slug: string) {
-  const pages = await fetchAPI('/wp/v2/pages', {
-    slug,
-  });
-  return pages[0];
-} 
+export const fetchProject = async (slug: string) => {
+  return fetchPost(slug, 'projects');
+}; 
