@@ -1,23 +1,23 @@
 'use client';
 
-import HorizontalGallery from '@/components/HorizontalGallery';
+import HorizontalGallery, { type MediaItem } from '@/components/HorizontalGallery';
 import AboutText from '@/components/AboutText';
 
-const mediaItems = [
+const mediaItems: MediaItem[] = [
   {
-    type: 'image',
+    type: 'image' as const,
     url: '/images/about/studio-1.jpg'
   },
   {
-    type: 'video',
+    type: 'video' as const,
     url: '/videos/about/process-1.mp4'
   },
   {
-    type: 'image',
+    type: 'image' as const,
     url: '/images/about/studio-2.jpg'
   },
   {
-    type: 'video',
+    type: 'video' as const,
     url: '/videos/about/process-2.mp4'
   }
 ];
@@ -35,7 +35,7 @@ export default function AboutPage() {
   return (
     <main>
       <HorizontalGallery items={mediaItems} />
-      <AboutText content={aboutContent} />
+      <AboutText title={aboutContent.title} content={aboutContent.paragraphs} />
     </main>
   );
 } 
