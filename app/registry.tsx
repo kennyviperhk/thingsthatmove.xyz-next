@@ -14,22 +14,26 @@ export default function StyledComponentsRegistry({
 
   useServerInsertedHTML(() => {
     const styles = styledComponentsStyleSheet.getStyleTags()
-    // Clear the sheet for reuse
     styledComponentsStyleSheet.instance.clearTag()
-    // Parse the styles to remove the surrounding <style> tags
-    const cleanStyles = styles.replace(/<style[^>]*>|<\/style>/g, '')
     return (
-      <style
-        data-styled="true"
-        dangerouslySetInnerHTML={{ __html: cleanStyles }}
+      <style 
+        data-styled="active"
+        data-styled-version="6.1.17"
+        dangerouslySetInnerHTML={{ __html: styles }}
       />
     )
   })
 
-  if (typeof window !== 'undefined') return <>{children}</>
+  if (typeof window !== 'undefined') {
+    return (
+      <StyleSheetManager enableVendorPrefixes>
+        {children}
+      </StyleSheetManager>
+    )
+  }
 
   return (
-    <StyleSheetManager sheet={styledComponentsStyleSheet.instance}>
+    <StyleSheetManager sheet={styledComponentsStyleSheet.instance} enableVendorPrefixes>
       {children}
     </StyleSheetManager>
   )

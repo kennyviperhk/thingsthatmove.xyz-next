@@ -1,4 +1,5 @@
 import { getPageBySlug } from '@/lib/wordpress';
+import StyledBioContent from './StyledBioContent';
 
 export const revalidate = 3600; // Revalidate every hour
 
@@ -10,12 +11,9 @@ export default async function BioPage() {
   }
 
   return (
-    <article className="bio-page">
-      <h1 dangerouslySetInnerHTML={{ __html: page.title.rendered }} />
-      <div 
-        className="content"
-        dangerouslySetInnerHTML={{ __html: page.content.rendered }}
-      />
-    </article>
+    <StyledBioContent 
+      title={page.title.rendered}
+      content={page.content.rendered}
+    />
   );
 } 

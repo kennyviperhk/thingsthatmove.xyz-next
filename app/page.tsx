@@ -1,32 +1,50 @@
-import { getLandings } from '@/lib/wordpress';
-import Navigation from '@/components/Navigation';
-import { CustomPost } from '@/lib/types';
+'use client';
 
-export const revalidate = 3600; // Revalidate every hour
+import { useEffect } from 'react';
+import { motion, useAnimation } from 'framer-motion';
+import styles from './styles/Home.module.css';
 
-export default async function Home() {
-  const landings = await getLandings();
+export default function Home() {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    controls.start({ opacity: 1, y: 0 });
+  }, [controls]);
+
+  const services = [
+    'Kinetic Art',
+    'Interactive Design',
+    'Robotics',
+    'Technical Consultancy',
+    'Creative and Research'
+  ];
 
   return (
-    <main className="min-h-screen">
-      <Navigation />
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold mb-8">Things That Move Ltd.</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {landings.map((landing: CustomPost) => (
-            <article key={landing.id} className="border rounded-lg p-6 hover:shadow-lg transition-shadow">
-              <h2 
-                className="text-2xl font-semibold mb-4"
-                dangerouslySetInnerHTML={{ __html: landing.title.rendered }}
-              />
-              <div 
-                className="prose"
-                dangerouslySetInnerHTML={{ __html: landing.excerpt?.rendered || '' }}
-              />
-            </article>
+    <main>
+
+
+      <section className={styles.servicesSection}>
+        <div className={styles.servicesList}>
+          {services.map((service, index) => (
+            <motion.div
+              key={service}
+              className={styles.serviceItem}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.2 }}
+              viewport={{ once: true }}
+            >
+              {service}
+            </motion.div>
           ))}
         </div>
-      </div>
+      </section>
+
+      <section className={styles.collaborateSection}>
+        <h2 className={styles.collaborateTitle}>
+          LET&apos;S COLLABORATE
+        </h2>
+      </section>
     </main>
   );
 }

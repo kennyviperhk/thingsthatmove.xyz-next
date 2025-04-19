@@ -5,10 +5,8 @@ import Script from 'next/script';
 import dynamic from 'next/dynamic';
 import StyledComponentsRegistry from './registry';
 import { GlobalStyles } from './styles/globalStyles';
+import LayoutContent from './LayoutContent';
 
-const Header = dynamic(() => import('@/components/Header'), { ssr: true });
-const Footer = dynamic(() => import('@/components/Footer'), { ssr: true });
-const TriangleLanding = dynamic(() => import('@/components/TriangleLanding'), { ssr: true });
 const GoogleTagManagerNoscript = dynamic(() => import('@/components/GoogleTagManagerNoscript'), { ssr: false });
 
 const inter = Inter({
@@ -57,14 +55,9 @@ export default function RootLayout({
         <GoogleTagManagerNoscript />
         <StyledComponentsRegistry>
           <GlobalStyles />
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <TriangleLanding />
-            <main className="flex-grow">
-              {children}
-            </main>
-            <Footer />
-          </div>
+          <LayoutContent>
+            {children}
+          </LayoutContent>
         </StyledComponentsRegistry>
       </body>
     </html>
