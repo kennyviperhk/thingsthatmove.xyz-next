@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
 import axios from 'axios';
 
+const WORDPRESS_API_BASE = 'https://blog.thingsthatmove.xyz/wp-json';
+
 interface Project {
   id: number;
   title: {
@@ -24,6 +26,8 @@ const GlobalStyle = createGlobalStyle`
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    background: black;
+    color: white;
   }
 `;
 
@@ -31,6 +35,12 @@ const ProjectsContainer = styled.div`
   padding: 120px 2rem 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  
+  h1 {
+    color: white;
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin-bottom: 2rem;
+  }
 `;
 
 const ProjectsGrid = styled.div`
@@ -68,6 +78,18 @@ const ProjectTitle = styled.h2`
   color: #333;
 `;
 
+const ErrorMessage = styled.p`
+  color: #ff4444;
+  font-size: 1.125rem;
+  margin: 2rem 0;
+`;
+
+const LoadingMessage = styled.p`
+  color: white;
+  font-size: 1.125rem;
+  margin: 2rem 0;
+`;
+
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,30 +98,44 @@ export default function ProjectsPage() {
   useEffect(() => {
     async function loadProjects() {
       try {
-        const categoriesResponse = await axios.get(`${process.env.NEXT_PUBLIC_WORDPRESS_API_URL}/wp/v2/categories`, {
+        console.log('Fetching categories from:', `${WORDPRESS_API_BASE}/wp/v2/categories`);
+        
+        const categoriesResponse = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/categories`, {
           params: {
             slug: 'projects'
           }
         });
+        
+        console.log('Categories response:', categoriesResponse.data);
         
         if (!categoriesResponse.data || categoriesResponse.data.length === 0) {
           throw new Error('Projects category not found');
         }
 
         const projectsCategoryId = categoriesResponse.data[0].id;
+        console.log('Projects category ID:', projectsCategoryId);
 
-        const { data } = await axios.get(`${process.env.NEXT_PUBLIC_WORDPRESS_API_URL}/wp/v2/posts`, {
+        console.log('Fetching posts from:', `${WORDPRESS_API_BASE}/wp/v2/posts`);
+        const { data } = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/posts`, {
           params: {
             categories: projectsCategoryId,
             _embed: true,
             per_page: 50
           }
         });
+        
+        console.log('Posts response:', data);
         setProjects(data);
         setError(null);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading projects:', error);
-        setError('Failed to load projects. Please try again later.');
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          config: error.config
+        });
+        setError(error.response?.data?.message || 'Failed to load projects. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -108,22 +144,14 @@ export default function ProjectsPage() {
     loadProjects();
   }, []);
 
-  if (error) {
-    return (
-      <ProjectsContainer>
-        <h1>Projects</h1>
-        <p style={{ color: 'red' }}>{error}</p>
-      </ProjectsContainer>
-    );
-  }
-
   return (
     <>
       <GlobalStyle />
       <ProjectsContainer>
         <h1>Projects</h1>
+        {error && <ErrorMessage>{error}</ErrorMessage>}
         {loading ? (
-          <p>Loading projects...</p>
+          <LoadingMessage>Loading projects...</LoadingMessage>
         ) : (
           <ProjectsGrid>
             {projects.map((project) => (
