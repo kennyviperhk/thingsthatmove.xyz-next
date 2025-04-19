@@ -71,6 +71,7 @@ const ProjectTitle = styled.h2`
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProjects() {
@@ -95,8 +96,10 @@ export default function ProjectsPage() {
           }
         });
         setProjects(data);
+        setError(null);
       } catch (error) {
         console.error('Error loading projects:', error);
+        setError('Failed to load projects. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -104,6 +107,15 @@ export default function ProjectsPage() {
 
     loadProjects();
   }, []);
+
+  if (error) {
+    return (
+      <ProjectsContainer>
+        <h1>Projects</h1>
+        <p style={{ color: 'red' }}>{error}</p>
+      </ProjectsContainer>
+    );
+  }
 
   return (
     <>
