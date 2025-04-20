@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import Script from 'next/script';
 import dynamic from 'next/dynamic';
 import StyledComponentsRegistry from './registry';
 import { GlobalStyles } from './styles/globalStyles';
 import LayoutContent from './LayoutContent';
+import { archivGrotesk } from './styles/fonts';
 
 const GoogleTagManagerNoscript = dynamic(() => import('@/components/GoogleTagManagerNoscript'), { ssr: false });
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
 
 export const metadata: Metadata = {
   title: "Things That Move Ltd.",
@@ -25,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={archivGrotesk.variable}>
       <head>
         {/* Google Tag Manager */}
         <Script id="gtm" strategy="afterInteractive">
@@ -51,7 +46,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={inter.variable}>
+      <body>
         <GoogleTagManagerNoscript />
         <StyledComponentsRegistry>
           <GlobalStyles />

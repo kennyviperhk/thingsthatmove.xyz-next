@@ -3,15 +3,40 @@
 import { createGlobalStyle } from 'styled-components'
 
 export const GlobalStyles = createGlobalStyle`
+  :root {
+    --font-archiv: var(--font-archiv-grotesk);
+  }
+
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+  }
+
+  html,
+  body {
+    max-width: 100vw;
+    overflow-x: hidden;
+    font-family: var(--font-archiv), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-archiv), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-weight: 400;
+  }
+
   html {
     font-size: 62.5%; /* 1rem = 10px */
   }
 
   body {
     box-sizing: border-box;
-    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue",
-      Helvetica, sans-serif;
-    font-weight: 300;
+    font-weight: 400;
     letter-spacing: -0.015em;
     text-align: left;
   }
@@ -33,7 +58,7 @@ export const GlobalStyles = createGlobalStyle`
   .faux-heading {
     font-feature-settings: "lnum";
     font-variant-numeric: lining-nums;
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: -0.0415625em;
     line-height: 1.25;
     margin: 3.5rem 0 2rem;
@@ -41,8 +66,6 @@ export const GlobalStyles = createGlobalStyle`
 
   h1,
   .heading-size-1 {
-    font-family: "Archiv Grotesk", -apple-system, BlinkMacSystemFont, "Helvetica Neue",
-    Helvetica, sans-serif;
     font-size: 10vw;
     letter-spacing: 0.2rem;
     text-transform: uppercase;
@@ -70,14 +93,14 @@ export const GlobalStyles = createGlobalStyle`
     line-height: 1.5;
     margin: 0 0 1em 0;
     font-size: 18px;
-    font-weight: 300;
+    font-weight: 400;
   }
 
   span {
     line-height: 1.5;
     margin: 0 0 1em 0;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 400;
   }
 
   a,

@@ -38,7 +38,8 @@ const Title = styled(motion.h1)`
   position: absolute;
   text-align: center;
   letter-spacing: 0.2em;
-  font-weight: 300;
+  font-weight: 400;
+  font-family: var(--font-archiv), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   z-index: 2;
 `;
 
