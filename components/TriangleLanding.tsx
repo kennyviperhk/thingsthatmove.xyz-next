@@ -269,35 +269,58 @@ export default function TriangleLanding({
 
     const fetchLandingData = async () => {
       try {
+        console.log('Fetching landing data for page type:', newPageType);
         const response = await axios.get('https://www.blog.thingsthatmove.xyz/wp-json/wp/v2/landings');
         const landings = response.data;
-        console.log('All landings:', landings);
+        console.log('API Response:', response.status, response.statusText);
+        console.log('All landings:', JSON.stringify(landings, null, 2));
         
         let targetLanding;
         let targetId: number | undefined;
 
-        if (newPageType === 'home') {
-          targetId = 3003;
-        } else if (newPageType === 'bio') {
-          targetId = 3008;
-        } else if (newPageType === 'projects') {
-          targetId = 3133;
-        }
+        // Map page types to landing IDs
+        const landingIdMap = {
+          home: 3003,
+          bio: 3008,
+          projects: 3133,
+          other: undefined
+        };
 
-        console.log('Looking for landing ID:', targetId);
-        targetLanding = landings.find((landing: any) => landing.id === targetId);
-        console.log('Found landing:', targetLanding);
+        targetId = landingIdMap[newPageType];
+        console.log('Target ID for page type:', newPageType, 'is:', targetId);
 
-        if (targetLanding) {
-          const newLandingData = {
-            foreground_media: targetLanding.foreground_media,
-            background_media: targetLanding.background_media
-          };
-          console.log('Setting landing data:', newLandingData);
-          setLandingData(newLandingData);
+        if (targetId) {
+          targetLanding = landings.find((landing: any) => {
+            console.log('Comparing landing ID:', landing.id, 'with target ID:', targetId);
+            return landing.id === targetId;
+          });
+          console.log('Found landing:', targetLanding ? 'yes' : 'no', targetLanding);
+
+          if (targetLanding) {
+            const newLandingData = {
+              foreground_media: targetLanding.foreground_media,
+              background_media: targetLanding.background_media
+            };
+            console.log('Setting landing data:', newLandingData);
+            setLandingData(newLandingData);
+          } else {
+            console.log('No landing found for ID:', targetId);
+            setLandingData(null);
+          }
+        } else {
+          console.log('No target ID for page type:', newPageType);
+          setLandingData(null);
         }
       } catch (error) {
         console.error('Error fetching landing data:', error);
+        if (axios.isAxiosError(error)) {
+          console.error('Axios error details:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data
+          });
+        }
+        setLandingData(null);
       }
     };
 
@@ -308,7 +331,7 @@ export default function TriangleLanding({
     console.log('Rendering background for page type:', pageType);
     console.log('Landing data:', landingData);
 
-    if ((pageType === 'home' || pageType === 'projects') && landingData?.background_media?.[0]?.guid) {
+    if ((pageType === 'home' || pageType === 'projects') && landingData?.background_media && Array.isArray(landingData.background_media) && landingData.background_media[0]?.guid) {
       const videoUrl = landingData.background_media[0].guid;
       console.log('Using background video URL:', videoUrl);
       

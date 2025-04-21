@@ -63,55 +63,27 @@ const ErrorDisplay = styled.div`
 
 export default function PostPage({ params }: { params: { slug: string[] } }) {
   const [post, setPost] = useState<PostData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadPost() {
+    const fetchPost = async () => {
       try {
-        // Remove 'post' from the beginning of the path if it exists
-        const pathParts = params.slug.filter(part => part !== 'post');
-        const slug = pathParts.join('/');
-        
-        console.log('Attempting to load post...');
-        console.log('Original path:', params.slug);
-        console.log('Processed slug:', slug);
-        console.log('Full API URL:', `${WORDPRESS_API_BASE}/wp/v2/posts?slug=${slug}&_embed=true`);
-        
-        const { data } = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/posts`, {
-          params: {
-            slug,
-            _embed: true
-          }
-        });
-
-        console.log('API Response:', data);
-
-        if (data && data.length > 0) {
-          console.log('Post found:', data[0]);
-          console.log('Post fields:', {
-            hasContent: !!data[0].content,
-            hasConcept: !!data[0].concept,
-            hasMainVideo: !!data[0].main_documentation_video,
-            hasTechInfo: !!data[0].tech_info,
-            hasFullWidthGallery: !!data[0].full_width_gallery,
-          });
-          setPost(data[0]);
-          setError(null);
-        } else {
-          console.log('No post found with slug:', slug);
-          throw new Error('Post not found');
+        setIsLoading(true);
+        const slug = params.slug.join('/');
+        const response = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/posts?slug=${slug}`);
+        if (response.data.length > 0) {
+          setPost(response.data[0]);
         }
       } catch (error: any) {
-        console.error('Error loading post:', error);
-        console.error('Error response:', error.response?.data);
+        console.error('Error fetching post:', error);
         setError(error.message || 'Failed to load post');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
-    }
+    };
 
-    loadPost();
+    fetchPost();
   }, [params.slug]);
 
   useEffect(() => {
@@ -139,9 +111,17 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
     }
   }, [post]);
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorDisplay>{error}</ErrorDisplay>;
-  if (!post) return <ErrorDisplay>Post not found</ErrorDisplay>;
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  if (error) {
+    return <ErrorDisplay>{error}</ErrorDisplay>;
+  }
+
+  if (!post) {
+    return <ErrorDisplay>Post not found</ErrorDisplay>;
+  }
 
   return (
     <PostArticle>

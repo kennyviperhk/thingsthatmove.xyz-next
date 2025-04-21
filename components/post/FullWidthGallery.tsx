@@ -1,8 +1,10 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
+import Loading from '@/components/Loading';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -15,10 +17,11 @@ interface GalleryData {
   post_mime_type?: string;
   media_type?: string;
   mime_type?: string;
+  post_title?: string;
 }
 
 interface FullWidthGalleryProps {
-  data?: GalleryData[] | any;
+  data?: GalleryData[] | GalleryData;
 }
 
 const GallerySection = styled.section`
@@ -99,7 +102,41 @@ const Figure = styled.figure`
 `;
 
 export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (data) {
+      const items = Array.isArray(data) ? data : [data];
+      Promise.all(
+        items.map((item: GalleryData) => {
+          const url = item.guid || item.url || item.source_url;
+          if (!url) return Promise.resolve(undefined);
+
+          return new Promise<void>((resolve) => {
+            if (url.match(/\.(mp4|webm|mov)$/i)) {
+              const video = document.createElement('video');
+              video.onloadeddata = () => resolve();
+              video.onerror = () => resolve();
+              video.src = url;
+            } else {
+              const img = new Image();
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              img.src = url;
+            }
+          });
+        })
+      ).then(() => {
+        setIsLoading(false);
+      });
+    }
+  }, [data]);
+
   if (!data) return null;
+
+  if (isLoading) {
+    return <Loading />;
+  }
 
   // Handle both array and object formats
   const galleryItems = Array.isArray(data) ? data : Object.values(data);

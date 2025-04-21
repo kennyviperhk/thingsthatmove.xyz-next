@@ -127,6 +127,7 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
 
   useEffect(() => {
     async function loadPost() {
+      console.log('Starting to load post...');
       try {
         const pathParts = params.slug.filter(part => part !== 'post');
         const slug = pathParts.join('/');
@@ -135,29 +136,21 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
         console.log('Original path:', params.slug);
         console.log('Processed slug:', slug);
         
-        const { data } = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/posts`, {
+        console.log('Making API request to:', `${WORDPRESS_API_BASE}/wp/v2/posts`);
+        const response = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/posts`, {
           params: {
             slug,
             _embed: true
           }
         });
-
-        console.log('API Response:', data);
+        
+        console.log('API Response status:', response.status);
+        const data = response.data;
 
         if (data && data.length > 0) {
           const postData = data[0];
           console.log('Post found:', postData);
-          console.log('Gallery data structure:', {
-            full_width_gallery: postData.full_width_gallery,
-            full_width_gallery_type: typeof postData.full_width_gallery,
-            is_array: Array.isArray(postData.full_width_gallery),
-            gallery_items: postData.full_width_gallery ? 
-              postData.full_width_gallery.map((item: any) => ({
-                url: item.url,
-                caption: item.caption,
-                type: typeof item
-              })) : 'No gallery items'
-          });
+          console.log('Setting post data to state...');
           setPost(postData);
           setError(null);
         } else {
@@ -166,13 +159,25 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
         }
       } catch (error: any) {
         console.error('Error loading post:', error);
-        console.error('Error response:', error.response?.data);
+        if (axios.isAxiosError(error)) {
+          console.error('Axios error details:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            config: {
+              url: error.config?.url,
+              params: error.config?.params
+            }
+          });
+        }
         setError(error.message || 'Failed to load post');
       } finally {
+        console.log('Finishing post load attempt, setting loading to false');
         setLoading(false);
       }
     }
 
+    console.log('Post page effect running, calling loadPost...');
     loadPost();
   }, [params.slug]);
 

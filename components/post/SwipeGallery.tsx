@@ -1,16 +1,23 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import Swiper from 'swiper';
+import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
+import Loading from '@/components/Loading';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 
 interface GalleryData {
-  url: string;
-  caption?: string;
+  ID?: string;
+  guid?: string;
+  url?: string;
+  source_url?: string;
+  post_mime_type?: string;
+  media_type?: string;
+  mime_type?: string;
+  post_title?: string;
 }
 
 interface SwipeGalleryProps {
@@ -19,7 +26,7 @@ interface SwipeGalleryProps {
 
 const GallerySection = styled.section`
   width: 100%;
-  max-width: 1400px;
+  max-width: 100%;
   margin: 4rem auto;
   padding: 0 1rem;
   position: relative;
@@ -31,6 +38,7 @@ const GallerySection = styled.section`
   .swiper {
     width: 100%;
     height: 100%;
+    overflow: visible;
   }
 
   .swiper-slide {
@@ -39,11 +47,23 @@ const GallerySection = styled.section`
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 60vh;
+    width: 40%;
+
+    @media (max-width: 768px) {
+      width: 80%;
+    }
   }
 
   .swiper-button-next,
   .swiper-button-prev {
     color: white;
+    &:after {
+      font-size: 24px;
+    }
+    @media (max-width: 768px) {
+      display: none;
+    }
   }
 
   .swiper-pagination-bullet {
@@ -55,67 +75,133 @@ const GallerySection = styled.section`
   }
 `;
 
-const GalleryImage = styled.img`
-  max-width: 100%;
-  height: auto;
-  display: block;
+const MediaContainer = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
 `;
 
-const ImageCaption = styled.div`
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  padding: 1rem;
-  text-align: center;
-  font-size: 0.9rem;
+const GalleryImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
+
+const GalleryVideo = styled.video`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 `;
 
 export default function SwipeGallery({ data }: SwipeGalleryProps) {
-  const swiperRef = useRef<HTMLDivElement>(null);
-
+  const [isLoading, setIsLoading] = useState(true);
+  
   useEffect(() => {
-    if (!swiperRef.current || !data) return;
-
-    const swiper = new Swiper(swiperRef.current, {
-      modules: [Navigation, Pagination],
-      slidesPerView: 1,
-      spaceBetween: 30,
-      loop: true,
-      pagination: {
-        el: '.swiper-pagination',
-        clickable: true,
-      },
-      navigation: {
-        nextEl: '.swiper-button-next',
-        prevEl: '.swiper-button-prev',
-      },
-    });
-
-    return () => {
-      swiper.destroy();
-    };
+    if (data) {
+      // Simulate checking if all media is loaded
+      Promise.all(
+        data.map(item => {
+          const url = item.guid || item.url || item.source_url;
+          if (!url) return Promise.resolve(undefined);
+          
+          return new Promise<void>((resolve) => {
+            if (url.match(/\.(mp4|webm|mov)$/i)) {
+              // For videos
+              const video = document.createElement('video');
+              video.onloadeddata = () => resolve();
+              video.onerror = () => resolve();
+              video.src = url;
+            } else {
+              // For images
+              const img = new Image();
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              img.src = url;
+            }
+          });
+        })
+      ).then(() => {
+        setIsLoading(false);
+      });
+    }
   }, [data]);
 
-  if (!data || data.length === 0) return null;
+  if (!data || data.length === 0) {
+    console.log('No gallery data provided');
+    return null;
+  }
+
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  const renderMedia = (item: GalleryData) => {
+    console.log('Rendering media item:', item);
+    
+    const url = item.guid || item.url || item.source_url;
+    if (!url) {
+      console.log('No URL found for media item');
+      return null;
+    }
+
+    const isVideo = url.match(/\.(mp4|webm|mov)$/i) || 
+                   item.mime_type?.startsWith('video/') ||
+                   item.post_mime_type?.startsWith('video/');
+
+    if (isVideo) {
+      return (
+        <GalleryVideo
+          autoPlay
+          muted
+          loop
+          playsInline
+        >
+          <source src={url} type="video/mp4" />
+        </GalleryVideo>
+      );
+    }
+
+    return (
+      <GalleryImage 
+        src={url} 
+        alt={item.post_title || ''} 
+      />
+    );
+  };
 
   return (
     <GallerySection>
-      <div className="swiper" ref={swiperRef}>
-        <div className="swiper-wrapper">
-          {data.map((item, index) => (
-            <div key={index} className="swiper-slide">
-              <GalleryImage src={item.url} alt={item.caption || ''} />
-              {item.caption && <ImageCaption>{item.caption}</ImageCaption>}
-            </div>
-          ))}
-        </div>
-        <div className="swiper-pagination"></div>
-        <div className="swiper-button-prev"></div>
-        <div className="swiper-button-next"></div>
-      </div>
+      <Swiper
+        modules={[Navigation, Pagination]}
+        navigation
+        pagination={{ clickable: true }}
+        loop={true}
+        slidesPerView="auto"
+        spaceBetween={20}
+        centeredSlides={true}
+        initialSlide={1}
+        breakpoints={{
+          320: {
+            slidesPerView: "auto",
+            spaceBetween: 10
+          },
+          768: {
+            slidesPerView: "auto",
+            spaceBetween: 20
+          }
+        }}
+      >
+        {data.map((item, index) => (
+          <SwiperSlide key={index}>
+            <MediaContainer>
+              {renderMedia(item)}
+            </MediaContainer>
+          </SwiperSlide>
+        ))}
+      </Swiper>
     </GallerySection>
   );
 } 
