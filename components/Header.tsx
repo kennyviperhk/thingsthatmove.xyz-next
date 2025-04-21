@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-const HeaderContainer = styled.header<{ isLight: boolean }>`
+const HeaderContainer = styled.header<{ $isLight: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
@@ -24,8 +24,8 @@ const Nav = styled.nav`
   margin: 0 auto;
 `;
 
-const NavLink = styled(Link)<{ isLight: boolean }>`
-  color: ${props => props.isLight ? 'black' : 'white'};
+const NavLink = styled(Link)<{ $isLight: boolean }>`
+  color: ${props => props.$isLight ? 'black' : 'white'};
   text-decoration: none;
   font-size: 1.25rem;
   transition: opacity 0.2s ease;
@@ -72,16 +72,16 @@ const Header = () => {
   }, [pathname]);
 
   return (
-    <HeaderContainer isLight={isLight}>
+    <HeaderContainer $isLight={isLight}>
       <Nav>
         <LeftSection>
-          <NavLink href="/bio" isLight={isLight}>About</NavLink>
+          <NavLink href="/bio" $isLight={isLight}>About</NavLink>
         </LeftSection>
         <CenterSection>
-          <NavLink href="/" isLight={isLight}>TTM</NavLink>
+          <NavLink href="/" $isLight={isLight}>TTM</NavLink>
         </CenterSection>
         <RightSection>
-          <NavLink href="/category/projects" isLight={isLight}>Projects</NavLink>
+          <NavLink href="/category/projects" $isLight={isLight}>Projects</NavLink>
         </RightSection>
       </Nav>
     </HeaderContainer>

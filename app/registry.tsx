@@ -18,7 +18,6 @@ export default function StyledComponentsRegistry({
     return (
       <style 
         data-styled="active"
-        data-styled-version="6.1.17"
         dangerouslySetInnerHTML={{ __html: styles }}
       />
     )
@@ -26,14 +25,14 @@ export default function StyledComponentsRegistry({
 
   if (typeof window !== 'undefined') {
     return (
-      <StyleSheetManager enableVendorPrefixes>
+      <StyleSheetManager shouldForwardProp={(prop) => !prop.startsWith('$')}>
         {children}
       </StyleSheetManager>
     )
   }
 
   return (
-    <StyleSheetManager sheet={styledComponentsStyleSheet.instance} enableVendorPrefixes>
+    <StyleSheetManager sheet={styledComponentsStyleSheet.instance} shouldForwardProp={(prop) => !prop.startsWith('$')}>
       {children}
     </StyleSheetManager>
   )

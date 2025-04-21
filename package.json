@@ -15,8 +15,10 @@
     "framer-motion": "^11.0.3",
     "next": "14.1.0",
     "react": "^18.2.0",
+    "react-animated-css": "^1.2.1",
     "react-dom": "^18.2.0",
-    "styled-components": "^6.1.17"
+    "styled-components": "^6.1.17",
+    "swiper": "^11.2.6"
   },
   "devDependencies": {
     "@types/node": "^20.11.19",

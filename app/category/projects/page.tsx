@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
 import axios from 'axios';
+import Link from 'next/link';
 
 const WORDPRESS_API_BASE = 'https://blog.thingsthatmove.xyz/wp-json';
 
@@ -14,6 +15,7 @@ interface Project {
   excerpt: {
     rendered: string;
   };
+  slug: string;
   _embedded?: {
     'wp:featuredmedia'?: Array<{
       source_url: string;
@@ -26,8 +28,6 @@ const GlobalStyle = createGlobalStyle`
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    background: black;
-    color: white;
   }
 `;
 
@@ -35,9 +35,11 @@ const ProjectsContainer = styled.div`
   padding: 120px 2rem 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
   
   h1 {
-    color: white;
     font-size: clamp(2rem, 4vw, 3rem);
     margin-bottom: 2rem;
   }
@@ -50,12 +52,15 @@ const ProjectsGrid = styled.div`
   margin-top: 2rem;
 `;
 
-const ProjectCard = styled.article`
-  background: white;
+const ProjectCard = styled(Link)`
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease;
+  backdrop-filter: blur(10px);
+  display: block;
   
   &:hover {
     transform: translateY(-4px);
@@ -69,13 +74,24 @@ const ProjectImage = styled.img`
 `;
 
 const ProjectContent = styled.div`
-  padding: 1rem;
+  padding: 1.5rem;
+  color: inherit;
 `;
 
 const ProjectTitle = styled.h2`
   margin: 0 0 1rem;
   font-size: 1.25rem;
-  color: #333;
+  color: inherit;
+`;
+
+const ProjectExcerpt = styled.div`
+  color: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  
+  p {
+    margin: 0;
+  }
 `;
 
 const ErrorMessage = styled.p`
@@ -85,7 +101,6 @@ const ErrorMessage = styled.p`
 `;
 
 const LoadingMessage = styled.p`
-  color: white;
   font-size: 1.125rem;
   margin: 2rem 0;
 `;
@@ -155,7 +170,7 @@ export default function ProjectsPage() {
         ) : (
           <ProjectsGrid>
             {projects.map((project) => (
-              <ProjectCard key={project.id}>
+              <ProjectCard key={project.id} href={`/post/${project.slug}`}>
                 {project._embedded?.['wp:featuredmedia']?.[0]?.source_url && (
                   <ProjectImage 
                     src={project._embedded['wp:featuredmedia'][0].source_url}
@@ -166,7 +181,7 @@ export default function ProjectsPage() {
                   <ProjectTitle 
                     dangerouslySetInnerHTML={{ __html: project.title.rendered }} 
                   />
-                  <div 
+                  <ProjectExcerpt
                     dangerouslySetInnerHTML={{ __html: project.excerpt.rendered }}
                   />
                 </ProjectContent>
