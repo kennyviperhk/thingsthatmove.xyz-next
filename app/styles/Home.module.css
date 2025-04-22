@@ -19,16 +19,16 @@
 }
 
 .servicesSection {
-  min-height: 100vh;
+  min-height: 100%;
   background: black;
   color: white;
-  padding: 4rem 2rem;
+
 }
 
 .servicesList {
   display: flex;
   flex-direction: column;
-  gap: 4rem;
+
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -41,7 +41,7 @@
 }
 
 .collaborateSection {
-  min-height: 100vh;
+  min-height: 100%;
   background: black;
   color: white;
   display: flex;

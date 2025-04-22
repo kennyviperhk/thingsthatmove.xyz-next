@@ -21,7 +21,11 @@ export default function Home() {
 
   return (
     <main>
-
+      <section className={styles.collaborateSection}>
+        <h2 className={styles.collaborateTitle}>
+          We Do
+        </h2>
+      </section>
 
       <section className={styles.servicesSection}>
         <div className={styles.servicesList}>
@@ -40,11 +44,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className={styles.collaborateSection}>
-        <h2 className={styles.collaborateTitle}>
-          LET&apos;S COLLABORATE
-        </h2>
-      </section>
+
     </main>
   );
 }
