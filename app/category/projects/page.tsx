@@ -49,14 +49,6 @@ const ProjectsContainer = styled.div`
   color: white;
 `;
 
-const CategoryFilters = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  justify-content: center;
-  flex-wrap: wrap;
-`;
-
 const CategoryButton = styled.button<{ $isActive: boolean }>`
   padding: 0.75rem 1.5rem;
   background: ${props => props.$isActive ? 'white' : 'transparent'};
@@ -69,6 +61,41 @@ const CategoryButton = styled.button<{ $isActive: boolean }>`
   
   &:hover {
     background: ${props => props.$isActive ? 'white' : 'rgba(255, 255, 255, 0.1)'};
+  }
+`;
+
+const CategoryFilters = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: 1rem;
+    width: 100%;
+  }
+`;
+
+const CategoryButtonsContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    grid-row: 2;
+    width: 100%;
+  }
+`;
+
+const AllProjectsButton = styled(CategoryButton)`
+  @media (max-width: 768px) {
+    grid-row: 1;
+    width: fit-content;
+    margin: 0 auto;
   }
 `;
 
@@ -312,21 +339,29 @@ export default function ProjectsPage() {
       <ProjectsContainer>
         <h1>Projects</h1>
         <CategoryFilters>
-          <CategoryButton 
-            onClick={() => setActiveCategory(null)}
-            $isActive={activeCategory === null}
+          <AllProjectsButton
+            $isActive={!activeCategory}
+            onClick={() => {
+              setActiveCategory(null);
+              filterProjects(null);
+            }}
           >
             All Projects
-          </CategoryButton>
-          {categories.map(category => (
-            <CategoryButton
-              key={category.id}
-              onClick={() => setActiveCategory(category.id)}
-              $isActive={activeCategory === category.id}
-            >
-              {category.label}
-            </CategoryButton>
-          ))}
+          </AllProjectsButton>
+          <CategoryButtonsContainer>
+            {categories.map(category => (
+              <CategoryButton
+                key={category.id}
+                $isActive={activeCategory === category.id}
+                onClick={() => {
+                  setActiveCategory(category.id);
+                  filterProjects(category.id);
+                }}
+              >
+                {category.label}
+              </CategoryButton>
+            ))}
+          </CategoryButtonsContainer>
         </CategoryFilters>
         {error && <ErrorMessage>{error}</ErrorMessage>}
         {loading && projects.length === 0 ? (
