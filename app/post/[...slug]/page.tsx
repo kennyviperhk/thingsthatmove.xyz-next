@@ -236,6 +236,10 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
         {Array.isArray(post.two_column_gallery) && post.two_column_gallery.length > 0 && (
           <TwoColumnGallery data={post.two_column_gallery} />
         )}
+
+        {post.is_secondary_two_column === "1" && (
+          <TwoColumnGallery data={post.secondary_two_column_gallery} />
+        )}
         
         {post.is_swipe === "1" && Array.isArray(post.swipe_gallery) && post.swipe_gallery.length > 0 && (
           <SwipeGallery data={post.swipe_gallery} />
