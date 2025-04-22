@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import TriangleLanding from '@/components/TriangleLanding';
-import HorizontalGallery, { type MediaItem } from '@/components/HorizontalGallery';
+import SwipeGallery from '@/components/post/SwipeGallery';
 
 const BioContainer = styled.article`
   max-width: 800px;
@@ -10,59 +11,145 @@ const BioContainer = styled.article`
   padding: 8rem 2rem;
   background: white;
   color: black;
-  
-  h1 {
-    font-size: clamp(2rem, 4vw, 3rem);
-    margin-bottom: 2rem;
-    font-weight: 500;
-  }
-  
-  .content {
-    font-size: 1.125rem;
-    line-height: 1.6;
-    
-    p {
-      margin-bottom: 1.5rem;
-      
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
+`;
+
+const BioNameDiv = styled.div`
+  position: absolute;
+  top: 10vh;
+  right: 0;
+  overflow: hidden;
+  @media(orientation: portrait) {
+    top: 48vh;
   }
 `;
 
-const mediaItems: MediaItem[] = [
-  {
-    type: 'image',
-    url: '/images/bio/studio-1.jpg'
-  },
-  {
-    type: 'video',
-    url: '/videos/bio/process-1.mp4'
-  },
-  {
-    type: 'image',
-    url: '/images/bio/studio-2.jpg'
-  },
-  {
-    type: 'video',
-    url: '/videos/bio/process-2.mp4'
+const BioName = styled.h1`
+  font-family: "Archiv Grotesk", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 10.5vw;
+  line-height: 10.5vw;
+  z-index: 3;
+  letter-spacing: 0.3vw;
+  mix-blend-mode: difference;
+  display: block;
+  position: relative;
+  margin-right: -6vw;
+  color: white;
+  @media(orientation: portrait) {
+    mix-blend-mode: difference;
+    display: block;
+    font-size: 85px;
+    color: white;
+    line-height: 85px;
   }
-];
+`;
+
+const BioTextSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+  margin-top: 2rem;
+`;
+
+const TextMainDiv = styled.div`
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  
+  @media(orientation: portrait) {
+    flex-direction: column;
+  }
+`;
+
+const TextSubDiv = styled.div`
+  flex: 1;
+  
+  .quote {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
+  
+  .description {
+    font-size: 1.125rem;
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+`;
+
+interface BioData {
+  primary_quote?: string;
+  primary_desc?: string;
+  secondary_quote?: string;
+  secondary_desc?: string;
+  gallery?: any[];
+}
 
 export default function BioPage() {
+  const [bioData, setBioData] = useState<BioData>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBioData = async () => {
+      try {
+        const response = await fetch('https://www.blog.thingsthatmove.xyz/wp-json/wp/v2/pages');
+        const pages = await response.json();
+        const bioPage = pages.find((page: any) => page.slug === 'bio' || page.slug === 'about');
+        
+        if (bioPage) {
+          setBioData({
+            primary_quote: bioPage.primary_quote || '',
+            primary_desc: bioPage.primary_desc || '',
+            secondary_quote: bioPage.secondary_quote || '',
+            secondary_desc: bioPage.secondary_desc || '',
+            gallery: bioPage.gallery || []
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching bio data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBioData();
+  }, []);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <>
       <TriangleLanding title="ABOUT" backgroundColor="black" />
       <BioContainer>
-        <h1>Bio</h1>
-        <div className="content">
-          <p>Kenny Wong was born in 1987 in Hong Kong. Wong's works explore the delicate relationship between daily experiences and perceptual stimulations. His research-based practice combines everyday objects with contemporary digital technology, creating artworks that reflect on our experience of living in the current techno-centric era.</p>
-          <p>Wong received his Master of Fine Arts from the School of Creative Media, City University of Hong Kong. His works have been shown internationally at museums, galleries and festivals including Today Art Museum (Beijing), Art Basel Hong Kong, Ars Electronica Festival (Linz), and more.</p>
-          <p>He is currently based in Hong Kong, working as an artist and creative technologist.</p>
-        </div>
+        <BioNameDiv>
+          <BioName>
+            <div>THINGS</div>
+            <div>THAT</div>
+            <div>MOVE</div>
+          </BioName>
+        </BioNameDiv>
+        
+        <BioTextSection>
+          <TextMainDiv>
+            <TextSubDiv>
+              <div className="quote">{bioData.primary_quote}</div>
+              <div className="description">{bioData.primary_desc}</div>
+            </TextSubDiv>
+          </TextMainDiv>
+          
+          <TextMainDiv>
+            <TextSubDiv>
+              <div className="quote">{bioData.secondary_quote}</div>
+              <div className="description">{bioData.secondary_desc}</div>
+            </TextSubDiv>
+          </TextMainDiv>
+        </BioTextSection>
       </BioContainer>
-      <HorizontalGallery items={mediaItems} />
+      
+      {bioData.gallery && bioData.gallery.length > 0 && (
+        <SwipeGallery data={bioData.gallery} />
+      )}
     </>
   );
 } 

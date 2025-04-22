@@ -1,13 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import ReactPlayer from 'react-player/lazy';
+import Loading from '@/components/Loading';
 
 interface PostVideoTextProps {
   concept?: string;
   video?: string;
   isSecondary?: boolean;
+}
+
+interface MediaLoadingState {
+  isLoading: boolean;
+  failed: boolean;
 }
 
 const VideoTextSection = styled.section.withConfig({
@@ -87,49 +93,119 @@ const NativeVideo = styled.video`
   object-fit: cover;
 `;
 
+const LoadingContainer = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  position: absolute;
+  top: 0;
+  left: 0;
+`;
+
 export default function PostVideoText({ concept, video, isSecondary = false }: PostVideoTextProps) {
   const [videoElement, setVideoElement] = useState<React.ReactNode | null>(null);
+  const [mediaState, setMediaState] = useState<MediaLoadingState>({ isLoading: true, failed: false });
+
+  const loadMediaItem = useCallback(async (url: string): Promise<boolean> => {
+    try {
+      setMediaState({ isLoading: true, failed: false });
+
+      await new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Loading timeout'));
+        }, 30000);
+
+        const fileExtension = url.split('.').pop()?.toLowerCase();
+        const imageExtensions = ['jpg', 'jpeg', 'gif', 'tiff', 'png', 'webp'];
+        const videoExtensions = ['mp4', 'webm'];
+
+        if (imageExtensions.includes(fileExtension || '')) {
+          const img = new Image();
+          img.onload = () => {
+            clearTimeout(timeoutId);
+            resolve();
+          };
+          img.onerror = () => {
+            clearTimeout(timeoutId);
+            reject();
+          };
+          img.src = url;
+        } else if (videoExtensions.includes(fileExtension || '')) {
+          const video = document.createElement('video');
+          video.onloadeddata = () => {
+            clearTimeout(timeoutId);
+            resolve();
+          };
+          video.onerror = () => {
+            clearTimeout(timeoutId);
+            reject();
+          };
+          video.src = url;
+        } else {
+          // For external videos (YouTube, Vimeo), resolve immediately
+          clearTimeout(timeoutId);
+          resolve();
+        }
+      });
+
+      setMediaState({ isLoading: false, failed: false });
+      return true;
+    } catch (error) {
+      setMediaState({ isLoading: false, failed: true });
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
-    if (!video) return;
+    if (!video) {
+      setMediaState({ isLoading: false, failed: false });
+      return;
+    }
 
     const fileExtension = video.split('.').pop()?.toLowerCase();
     const imageExtensions = ['jpg', 'jpeg', 'gif', 'tiff', 'png', 'webp'];
     const videoExtensions = ['mp4', 'webm'];
 
-    if (imageExtensions.includes(fileExtension || '')) {
-      setVideoElement(<img src={video} alt={concept || 'Media content'} />);
-    } else if (videoExtensions.includes(fileExtension || '')) {
-      setVideoElement(
-        <NativeVideo playsInline autoPlay muted loop>
-          <source src={`${video}#t=0.1`} type={`video/${fileExtension}`} />
-        </NativeVideo>
-      );
-    } else if (ReactPlayer.canPlay(video)) {
-      setVideoElement(
-        <ReactPlayer
-          url={video}
-          width="100%"
-          height="100%"
-          controls
-          className="react-player"
-          config={{
-            vimeo: {
-              playerOptions: {
-                title: false,
-                byline: false,
-                portrait: false,
-                playsinline: true,
-                autopause: false,
-                responsive: true,
-                dnt: true
-              }
-            }
-          }}
-        />
-      );
-    }
-  }, [video, concept]);
+    loadMediaItem(video).then(success => {
+      if (success) {
+        if (imageExtensions.includes(fileExtension || '')) {
+          setVideoElement(<img src={video} />);
+        } else if (videoExtensions.includes(fileExtension || '')) {
+          setVideoElement(
+            <NativeVideo playsInline autoPlay muted loop>
+              <source src={`${video}#t=0.1`} type={`video/${fileExtension}`} />
+            </NativeVideo>
+          );
+        } else if (ReactPlayer.canPlay(video)) {
+          setVideoElement(
+            <ReactPlayer
+              url={video}
+              width="100%"
+              height="100%"
+              controls
+              className="react-player"
+              config={{
+                vimeo: {
+                  playerOptions: {
+                    title: false,
+                    byline: false,
+                    portrait: false,
+                    playsinline: true,
+                    autopause: false,
+                    responsive: true,
+                    dnt: true
+                  }
+                }
+              }}
+            />
+          );
+        }
+      }
+    });
+  }, [video, loadMediaItem]);
 
   if (!concept && !video) return null;
 
@@ -139,7 +215,22 @@ export default function PostVideoText({ concept, video, isSecondary = false }: P
         <ConceptText>{concept}</ConceptText>
       </TextContent>
       <VideoContainer>
-        {videoElement}
+        {mediaState.isLoading && (
+          <LoadingContainer>
+            <Loading />
+          </LoadingContainer>
+        )}
+        {mediaState.failed ? (
+          <LoadingContainer>
+            <div style={{ color: 'white', textAlign: 'center' }}>
+              Failed to load media
+              <br />
+              <button onClick={() => loadMediaItem(video || '')}>Retry</button>
+            </div>
+          </LoadingContainer>
+        ) : (
+          videoElement
+        )}
       </VideoContainer>
     </VideoTextSection>
   );

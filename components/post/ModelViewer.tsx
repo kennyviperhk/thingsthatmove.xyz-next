@@ -1,6 +1,8 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import Loading from '@/components/Loading';
 
 interface ModelViewerProps {
   data1?: string; // model URL
@@ -30,7 +32,21 @@ const ModelFrame = styled.iframe`
   left: 0;
 `;
 
+const LoadingContainer = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  position: absolute;
+  top: 0;
+  left: 0;
+`;
+
 export default function ModelViewer({ data1, data2, data3 }: ModelViewerProps) {
+  const [isLoading, setIsLoading] = useState(true);
+
   if (!data1) return null;
 
   // Construct the model viewer URL with parameters
@@ -40,9 +56,15 @@ export default function ModelViewer({ data1, data2, data3 }: ModelViewerProps) {
 
   return (
     <ModelSection>
+      {isLoading && (
+        <LoadingContainer>
+          <Loading />
+        </LoadingContainer>
+      )}
       <ModelFrame 
         src={modelUrl.toString()} 
         allowFullScreen
+        onLoad={() => setIsLoading(false)}
       />
     </ModelSection>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
@@ -22,6 +22,11 @@ interface GalleryData {
 
 interface FullWidthGalleryProps {
   data?: GalleryData[] | GalleryData;
+}
+
+interface MediaLoadingState {
+  isLoading: boolean;
+  failed: boolean;
 }
 
 const GallerySection = styled.section`
@@ -101,46 +106,94 @@ const Figure = styled.figure`
   width: 100%;
 `;
 
+const LoadingContainer = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+`;
+
 export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [mediaStates, setMediaStates] = useState<Record<string, MediaLoadingState>>({});
+
+  const loadMediaItem = useCallback(async (url: string): Promise<boolean> => {
+    try {
+      setMediaStates(prev => ({
+        ...prev,
+        [url]: { isLoading: true, failed: false }
+      }));
+
+      await new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Loading timeout'));
+        }, 30000);
+
+        if (url.match(/\.(mp4|webm|mov)$/i)) {
+          const video = document.createElement('video');
+          video.onloadeddata = () => {
+            clearTimeout(timeoutId);
+            resolve();
+          };
+          video.onerror = () => {
+            clearTimeout(timeoutId);
+            reject();
+          };
+          video.src = url;
+        } else {
+          const img = new Image();
+          img.onload = () => {
+            clearTimeout(timeoutId);
+            resolve();
+          };
+          img.onerror = () => {
+            clearTimeout(timeoutId);
+            reject();
+          };
+          img.src = url;
+        }
+      });
+
+      setMediaStates(prev => ({
+        ...prev,
+        [url]: { isLoading: false, failed: false }
+      }));
+      return true;
+    } catch (error) {
+      setMediaStates(prev => ({
+        ...prev,
+        [url]: { isLoading: false, failed: true }
+      }));
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
-    if (data) {
-      const items = Array.isArray(data) ? data : [data];
-      Promise.all(
-        items.map((item: GalleryData) => {
-          const url = item.guid || item.url || item.source_url;
-          if (!url) return Promise.resolve(undefined);
+    if (!data) return;
 
-          return new Promise<void>((resolve) => {
-            if (url.match(/\.(mp4|webm|mov)$/i)) {
-              const video = document.createElement('video');
-              video.onloadeddata = () => resolve();
-              video.onerror = () => resolve();
-              video.src = url;
-            } else {
-              const img = new Image();
-              img.onload = () => resolve();
-              img.onerror = () => resolve();
-              img.src = url;
-            }
-          });
-        })
-      ).then(() => {
-        setIsLoading(false);
-      });
-    }
-  }, [data]);
+    const items = Array.isArray(data) ? data : [data];
+    const urls = items.map(item => {
+      const url = item.guid || item.url || item.source_url;
+      return url || '';
+    }).filter(url => url !== '');
+
+    // Initialize loading states
+    const initialStates: Record<string, MediaLoadingState> = {};
+    urls.forEach(url => {
+      initialStates[url] = { isLoading: true, failed: false };
+    });
+    setMediaStates(initialStates);
+
+    // Load each media item
+    urls.forEach(url => {
+      loadMediaItem(url);
+    });
+  }, [data, loadMediaItem]);
 
   if (!data) return null;
 
-  if (isLoading) {
-    return <Loading />;
-  }
-
-  // Handle both array and object formats
   const galleryItems = Array.isArray(data) ? data : Object.values(data);
-
   if (galleryItems.length === 0) return null;
 
   const renderMedia = (item: any) => {
@@ -156,6 +209,28 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
     }
 
     if (!mediaUrl) return null;
+
+    const state = mediaStates[mediaUrl] || { isLoading: true, failed: false };
+
+    if (state.isLoading) {
+      return (
+        <LoadingContainer>
+          <Loading />
+        </LoadingContainer>
+      );
+    }
+
+    if (state.failed) {
+      return (
+        <LoadingContainer>
+          <div style={{ color: 'white', textAlign: 'center' }}>
+            Failed to load media
+            <br />
+            <button onClick={() => loadMediaItem(mediaUrl)}>Retry</button>
+          </div>
+        </LoadingContainer>
+      );
+    }
 
     let isVideo = false;
     if (item.post_mime_type) {
@@ -179,8 +254,7 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
       />
     ) : (
       <GalleryImage 
-        src={mediaUrl} 
-        loading="lazy"
+        src={mediaUrl}
       />
     );
   };

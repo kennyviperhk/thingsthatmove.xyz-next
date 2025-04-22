@@ -98,27 +98,51 @@ const GalleryVideo = styled.video`
 
 export default function SwipeGallery({ data }: SwipeGalleryProps) {
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   
   useEffect(() => {
     if (data) {
+      let loadedCount = 0;
+      const totalItems = data.length;
+
       // Simulate checking if all media is loaded
       Promise.all(
         data.map(item => {
           const url = item.guid || item.url || item.source_url;
-          if (!url) return Promise.resolve(undefined);
+          if (!url) {
+            loadedCount++;
+            setLoadingProgress((loadedCount / totalItems) * 100);
+            return Promise.resolve(undefined);
+          }
           
           return new Promise<void>((resolve) => {
             if (url.match(/\.(mp4|webm|mov)$/i)) {
               // For videos
               const video = document.createElement('video');
-              video.onloadeddata = () => resolve();
-              video.onerror = () => resolve();
+              video.onloadeddata = () => {
+                loadedCount++;
+                setLoadingProgress((loadedCount / totalItems) * 100);
+                resolve();
+              };
+              video.onerror = () => {
+                loadedCount++;
+                setLoadingProgress((loadedCount / totalItems) * 100);
+                resolve();
+              };
               video.src = url;
             } else {
               // For images
               const img = new Image();
-              img.onload = () => resolve();
-              img.onerror = () => resolve();
+              img.onload = () => {
+                loadedCount++;
+                setLoadingProgress((loadedCount / totalItems) * 100);
+                resolve();
+              };
+              img.onerror = () => {
+                loadedCount++;
+                setLoadingProgress((loadedCount / totalItems) * 100);
+                resolve();
+              };
               img.src = url;
             }
           });
@@ -135,7 +159,7 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
   }
 
   if (isLoading) {
-    return <Loading />;
+    return <Loading progress={loadingProgress} />;
   }
 
   const renderMedia = (item: GalleryData) => {

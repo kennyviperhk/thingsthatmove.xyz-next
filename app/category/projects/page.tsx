@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import styled, { createGlobalStyle } from 'styled-components';
+import { useEffect, useState, useCallback } from 'react';
+import styled, { createGlobalStyle, keyframes } from 'styled-components';
 import axios from 'axios';
 import Link from 'next/link';
+import Loading from '@/components/Loading';
 
 const WORDPRESS_API_BASE = 'https://blog.thingsthatmove.xyz/wp-json';
 
@@ -21,6 +22,11 @@ interface Project {
       source_url: string;
     }>;
   };
+}
+
+interface MediaLoadingState {
+  isLoading: boolean;
+  failed: boolean;
 }
 
 const GlobalStyle = createGlobalStyle`
@@ -105,33 +111,107 @@ const LoadingMessage = styled.p`
   margin: 2rem 0;
 `;
 
+const LoadingContainer = styled.div`
+  width: 100%;
+  height: 200px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+`;
+
+const ProgressBarContainer = styled.div`
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+`;
+
+const ProgressBar = styled.div<{ width: number }>`
+  width: ${props => props.width}%;
+  height: 100%;
+  background: white;
+  transition: width 0.3s ease;
+`;
+
+const InitialLoadingContainer = styled.div`
+  width: 100%;
+  height: calc(100vh - 200px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+`;
+
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mediaStates, setMediaStates] = useState<Record<string, MediaLoadingState>>({});
+  const [loadingProgress, setLoadingProgress] = useState(0);
+
+  const loadMediaItem = useCallback(async (url: string): Promise<boolean> => {
+    try {
+      setMediaStates(prev => ({
+        ...prev,
+        [url]: { isLoading: true, failed: false }
+      }));
+
+      await new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Loading timeout'));
+        }, 30000);
+
+        const img = new Image();
+        img.onload = () => {
+          clearTimeout(timeoutId);
+          resolve();
+        };
+        img.onerror = () => {
+          clearTimeout(timeoutId);
+          reject();
+        };
+        img.src = url;
+      });
+
+      setMediaStates(prev => ({
+        ...prev,
+        [url]: { isLoading: false, failed: false }
+      }));
+      return true;
+    } catch (error) {
+      setMediaStates(prev => ({
+        ...prev,
+        [url]: { isLoading: false, failed: true }
+      }));
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     async function loadProjects() {
       try {
-        console.log('Fetching categories from:', `${WORDPRESS_API_BASE}/wp/v2/categories`);
-        
+        setLoadingProgress(10);
         const categoriesResponse = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/categories`, {
           params: {
             slug: 'projects'
           }
         });
         
-        console.log('Categories response:', categoriesResponse.data);
+        setLoadingProgress(30);
         
         if (!categoriesResponse.data || categoriesResponse.data.length === 0) {
           throw new Error('Projects category not found');
         }
 
         const projectsCategoryId = categoriesResponse.data[0].id;
-        console.log('Projects category ID:', projectsCategoryId);
-
-        console.log('Fetching posts from:', `${WORDPRESS_API_BASE}/wp/v2/posts`);
-        const { data } = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/posts`, {
+        
+        setLoadingProgress(50);
+        const { data } = await axios.get<Project[]>(`${WORDPRESS_API_BASE}/wp/v2/posts`, {
           params: {
             categories: projectsCategoryId,
             _embed: true,
@@ -139,54 +219,97 @@ export default function ProjectsPage() {
           }
         });
         
-        console.log('Posts response:', data);
+        setLoadingProgress(70);
         setProjects(data);
+
+        // Initialize media loading states
+        const mediaUrls = data
+          .map((project: Project) => project._embedded?.['wp:featuredmedia']?.[0]?.source_url)
+          .filter((url: string | undefined): url is string => !!url);
+
+        const initialStates: Record<string, MediaLoadingState> = {};
+        mediaUrls.forEach((url: string) => {
+          initialStates[url] = { isLoading: true, failed: false };
+        });
+        setMediaStates(initialStates);
+
+        // Start loading media
+        let loadedCount = 0;
+        const totalMedia = mediaUrls.length;
+        
+        for (const url of mediaUrls) {
+          await loadMediaItem(url);
+          loadedCount++;
+          setLoadingProgress(70 + (loadedCount / totalMedia) * 30);
+        }
+
         setError(null);
       } catch (error: any) {
         console.error('Error loading projects:', error);
-        console.error('Error details:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          config: error.config
-        });
         setError(error.response?.data?.message || 'Failed to load projects. Please try again later.');
       } finally {
         setLoading(false);
+        setTimeout(() => setLoadingProgress(100), 500);
       }
     }
 
     loadProjects();
-  }, []);
+  }, [loadMediaItem]);
 
   return (
     <>
       <GlobalStyle />
+      <ProgressBarContainer>
+        <ProgressBar width={loadingProgress} />
+      </ProgressBarContainer>
       <ProjectsContainer>
         <h1>Projects</h1>
         {error && <ErrorMessage>{error}</ErrorMessage>}
-        {loading ? (
-          <LoadingMessage>Loading projects...</LoadingMessage>
+        {loading && projects.length === 0 ? (
+          <InitialLoadingContainer>
+            <Loading />
+          </InitialLoadingContainer>
         ) : (
           <ProjectsGrid>
-            {projects.map((project) => (
-              <ProjectCard key={project.id} href={`/post/${project.slug}`}>
-                {project._embedded?.['wp:featuredmedia']?.[0]?.source_url && (
-                  <ProjectImage 
-                    src={project._embedded['wp:featuredmedia'][0].source_url}
-                    alt={project.title.rendered}
-                  />
-                )}
-                <ProjectContent>
-                  <ProjectTitle 
-                    dangerouslySetInnerHTML={{ __html: project.title.rendered }} 
-                  />
-                  <ProjectExcerpt
-                    dangerouslySetInnerHTML={{ __html: project.excerpt.rendered }}
-                  />
-                </ProjectContent>
-              </ProjectCard>
-            ))}
+            {projects.map((project) => {
+              const imageUrl = project._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+              const mediaState = imageUrl ? mediaStates[imageUrl] : null;
+
+              return (
+                <ProjectCard key={project.id} href={`/post/${project.slug}`}>
+                  {imageUrl ? (
+                    mediaState?.isLoading ? (
+                      <LoadingContainer>
+                        <Loading />
+                      </LoadingContainer>
+                    ) : mediaState?.failed ? (
+                      <LoadingContainer>
+                        <div style={{ color: 'white', textAlign: 'center' }}>
+                          Failed to load image
+                          <br />
+                          <button onClick={(e) => {
+                            e.preventDefault();
+                            loadMediaItem(imageUrl);
+                          }}>Retry</button>
+                        </div>
+                      </LoadingContainer>
+                    ) : (
+                      <ProjectImage 
+                        src={imageUrl}
+                      />
+                    )
+                  ) : null}
+                  <ProjectContent>
+                    <ProjectTitle 
+                      dangerouslySetInnerHTML={{ __html: project.title.rendered }} 
+                    />
+                    <ProjectExcerpt
+                      dangerouslySetInnerHTML={{ __html: project.excerpt.rendered }}
+                    />
+                  </ProjectContent>
+                </ProjectCard>
+              );
+            })}
           </ProjectsGrid>
         )}
       </ProjectsContainer>

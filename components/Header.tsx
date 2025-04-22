@@ -13,6 +13,7 @@ const HeaderContainer = styled.header<{ $isLight: boolean }>`
   z-index: 1000;
   padding: 1rem 2rem;
   background: transparent;
+  mix-blend-mode: difference;
 `;
 
 const Nav = styled.nav`
@@ -25,10 +26,14 @@ const Nav = styled.nav`
 `;
 
 const NavLink = styled(Link)<{ $isLight: boolean }>`
-  color: ${props => props.$isLight ? 'black' : 'white'};
+  color: white;
   text-decoration: none;
-  font-size: 1.25rem;
+  font-size: 2.75rem;
   transition: opacity 0.2s ease;
+  text-shadow: 
+    0 0 5px rgba(255, 255, 255, 0.5),
+    0 0 10px rgba(255, 255, 255, 0.4),
+    0 0 15x rgba(255, 255, 255, 0.3);
   
   &:hover {
     opacity: 0.8;
@@ -59,16 +64,9 @@ const Header = () => {
       }
     };
 
-    // Initial check
     handleScroll();
-
-    // Add scroll listener
     window.addEventListener('scroll', handleScroll);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [pathname]);
 
   return (
