@@ -63,6 +63,7 @@ interface PostData {
   is_exhibition_record?: string;
   is_related_post?: string;
   is_3d_model?: string;
+  is_secondary_two_column?: string;
   model_viewer?: string;
   model_height?: string;
   distance_between_the_ground?: string;
