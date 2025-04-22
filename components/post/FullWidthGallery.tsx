@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
@@ -62,10 +62,10 @@ const GalleryImage = styled.img`
 `;
 
 const GalleryVideo = styled.video`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
   display: block;
+  width: 100%;
+  overflow: hidden;
+  object-fit: cover;
   background: #000;
 `;
 
@@ -115,6 +115,125 @@ const LoadingContainer = styled.div`
   justify-content: center;
   background: #000;
 `;
+
+// Add debug logging function
+const debugLog = (message: string, ...args: any[]) => {
+  console.log(`[FullWidthGallery] ${message}`, ...args);
+};
+
+const VideoComponent = ({ url }: { url: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isError, setIsError] = useState(false);
+  const [loadingState, setLoadingState] = useState<'initial' | 'loading' | 'playing' | 'error'>('initial');
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleCanPlay = () => {
+      console.log('[FullWidthGallery] Video can play:', url);
+      setLoadingState('playing');
+    };
+
+    const handleError = (e: Event) => {
+      const videoEl = e.target as HTMLVideoElement;
+      console.error('[FullWidthGallery] Video error:', {
+        url,
+        error: videoEl.error,
+        networkState: videoEl.networkState,
+        readyState: videoEl.readyState,
+        currentSrc: videoEl.currentSrc
+      });
+      setIsError(true);
+      setLoadingState('error');
+    };
+
+    video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('error', handleError);
+
+    // Force load the video
+    video.load();
+    setLoadingState('loading');
+
+    return () => {
+      video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('error', handleError);
+    };
+  }, [url]);
+
+  if (isError) {
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#000',
+        color: '#fff',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div>
+          Error loading video
+          <button 
+            onClick={() => {
+              setIsError(false);
+              setLoadingState('initial');
+              const video = videoRef.current;
+              if (video) {
+                video.load();
+              }
+            }}
+            style={{
+              marginLeft: '10px',
+              padding: '5px 10px',
+              background: '#fff',
+              color: '#000',
+              border: 'none',
+              borderRadius: '4px'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <GalleryVideo
+        ref={videoRef}
+        playsInline={true}
+        autoPlay={true}
+        muted={true}
+        loop={true}
+        controls={false}
+        webkit-playsinline="true"
+        x5-playsinline="true"
+        x5-video-player-type="h5"
+        x5-video-player-fullscreen="true"
+      >
+        <source 
+          src={`${getProxiedMediaUrl(url)}#t=0.1`} 
+          type="video/mp4"
+        />
+      </GalleryVideo>
+      {loadingState === 'loading' && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: 'white'
+        }}>
+          Loading...
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
   const [mediaStates, setMediaStates] = useState<Record<string, MediaLoadingState>>({});
@@ -200,6 +319,8 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
   if (galleryItems.length === 0) return null;
 
   const renderMedia = (item: any) => {
+    console.log('[FullWidthGallery] Rendering media:', item);
+
     let mediaUrl = null;
     if (item.guid?.rendered) {
       mediaUrl = item.guid.rendered;
@@ -211,28 +332,9 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
       mediaUrl = item.url;
     }
 
-    if (!mediaUrl) return null;
-
-    const state = mediaStates[mediaUrl] || { isLoading: true, failed: false };
-
-    if (state.isLoading) {
-      return (
-        <LoadingContainer>
-          <Loading />
-        </LoadingContainer>
-      );
-    }
-
-    if (state.failed) {
-      return (
-        <LoadingContainer>
-          <div style={{ color: 'white', textAlign: 'center' }}>
-            Failed to load media
-            <br />
-            <button onClick={() => loadMediaItem(mediaUrl)}>Retry</button>
-          </div>
-        </LoadingContainer>
-      );
+    if (!mediaUrl) {
+      console.log('[FullWidthGallery] No media URL found');
+      return null;
     }
 
     let isVideo = false;
@@ -246,20 +348,13 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
       isVideo = mediaUrl.toLowerCase().match(/\.(mp4|webm|mov|avi)$/i) !== null;
     }
 
+    console.log('[FullWidthGallery] Media type determined:', { isVideo, mediaUrl });
+
     return isVideo ? (
-      <GalleryVideo 
-        autoPlay
-        loop
-        muted
-        playsInline
-        src={getProxiedMediaUrl(mediaUrl)}
-        preload="metadata"
-        crossOrigin="anonymous"
-      />
+      <VideoComponent url={mediaUrl} />
     ) : (
       <GalleryImage 
         src={getProxiedMediaUrl(mediaUrl)}
-        crossOrigin="anonymous"
       />
     );
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components';
 import Loading from '@/components/Loading';
 import { getProxiedMediaUrl, getMediaType } from '@/lib/media';
@@ -47,12 +47,11 @@ const GalleryImage = styled.img`
 `;
 
 const GalleryVideo = styled.video`
-  width: 100%;
-  height: auto;
   display: block;
-  margin-bottom: 1rem;
+  width: 100%;
+  overflow: hidden;
+  object-fit: cover;
   background: #000;
-  cursor: pointer;
 `;
 
 const Figure = styled.figure`
@@ -80,6 +79,125 @@ const RETRY_DELAY = 1000; // 1 second
 
 const isVideoUrl = (url: string) => {
   return /\.(mp4|webm|mov)$/i.test(url);
+};
+
+// Add debug logging function
+const debugLog = (message: string, ...args: any[]) => {
+  console.log(`[BigVerticalGallery] ${message}`, ...args);
+};
+
+const VideoComponent = ({ url }: { url: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isError, setIsError] = useState(false);
+  const [loadingState, setLoadingState] = useState<'initial' | 'loading' | 'playing' | 'error'>('initial');
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleCanPlay = () => {
+      console.log('[BigVerticalGallery] Video can play:', url);
+      setLoadingState('playing');
+    };
+
+    const handleError = (e: Event) => {
+      const videoEl = e.target as HTMLVideoElement;
+      console.error('[BigVerticalGallery] Video error:', {
+        url,
+        error: videoEl.error,
+        networkState: videoEl.networkState,
+        readyState: videoEl.readyState,
+        currentSrc: videoEl.currentSrc
+      });
+      setIsError(true);
+      setLoadingState('error');
+    };
+
+    video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('error', handleError);
+
+    // Force load the video
+    video.load();
+    setLoadingState('loading');
+
+    return () => {
+      video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('error', handleError);
+    };
+  }, [url]);
+
+  if (isError) {
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#000',
+        color: '#fff',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div>
+          Error loading video
+          <button 
+            onClick={() => {
+              setIsError(false);
+              setLoadingState('initial');
+              const video = videoRef.current;
+              if (video) {
+                video.load();
+              }
+            }}
+            style={{
+              marginLeft: '10px',
+              padding: '5px 10px',
+              background: '#fff',
+              color: '#000',
+              border: 'none',
+              borderRadius: '4px'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <GalleryVideo
+        ref={videoRef}
+        playsInline={true}
+        autoPlay={true}
+        muted={true}
+        loop={true}
+        controls={false}
+        webkit-playsinline="true"
+        x5-playsinline="true"
+        x5-video-player-type="h5"
+        x5-video-player-fullscreen="true"
+      >
+        <source 
+          src={`${getProxiedMediaUrl(url)}#t=0.1`} 
+          type="video/mp4"
+        />
+      </GalleryVideo>
+      {loadingState === 'loading' && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: 'white'
+        }}>
+          Loading...
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default function BigVerticalGallery({ data }: BigVerticalGalleryProps) {
@@ -176,58 +294,35 @@ export default function BigVerticalGallery({ data }: BigVerticalGalleryProps) {
   const items = Array.isArray(data) ? data : [data];
 
   const renderMedia = (item: GalleryData) => {
-    const url = item.url || item.guid || item.source_url || '';
-    const proxiedUrl = getProxiedMediaUrl(url);
-    const mediaType = getMediaType(url, item.mime_type);
-    const state = mediaStates[url] || { isLoading: true, failed: false };
-
-    if (state.failed) {
-      return (
-        <div style={{ 
-          padding: '2rem', 
-          textAlign: 'center', 
-          background: 'rgba(255,0,0,0.1)',
-          color: 'white' 
-        }}>
-          Failed to load media. <button onClick={() => loadMediaItem(url)}>Retry</button>
-        </div>
-      );
+    const url = item.guid || item.url || item.source_url;
+    if (!url) {
+      console.log('[BigVerticalGallery] No media URL found');
+      return null;
     }
 
-    if (state.isLoading) {
-      return (
-        <LoadingContainer>
-          <Loading />
-        </LoadingContainer>
-      );
-    }
+    const isVideo = url.match(/\.(mp4|webm|mov)$/i) || 
+                   item.mime_type?.startsWith('video/') ||
+                   item.post_mime_type?.startsWith('video/');
 
-    return mediaType === 'video' ? (
-      <GalleryVideo 
-        autoPlay
-        loop
-        muted
-        playsInline
-        src={proxiedUrl}
-        preload="metadata"
-      />
+    console.log('[BigVerticalGallery] Media type determined:', { isVideo, url });
+
+    return isVideo ? (
+      <VideoComponent url={url} />
     ) : (
       <GalleryImage 
-        src={proxiedUrl}
-        alt={item.title?.rendered || ''}
+        src={getProxiedMediaUrl(url)}
+        alt={item.title?.rendered || item.post_title || ''}
       />
     );
   };
 
   return (
     <GallerySection>
-      {items.map((item: GalleryData, index: number) => {
-        return (
-          <Figure key={index}>
-            {renderMedia(item)}
-          </Figure>
-        );
-      })}
+      {items.map((item: GalleryData, index: number) => (
+        <Figure key={index}>
+          {renderMedia(item)}
+        </Figure>
+      ))}
     </GallerySection>
   );
 } 

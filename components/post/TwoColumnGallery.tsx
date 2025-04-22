@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { getProxiedMediaUrl } from '@/lib/media';
 import Loading from '@/components/Loading';
@@ -11,6 +11,8 @@ interface GalleryData {
   post_title?: string;
   caption?: string;
   guid_rendered?: string;
+  post_mime_type?: string;
+  mime_type?: string;
 }
 
 interface TwoColumnGalleryProps {
@@ -96,12 +98,141 @@ const LoadingOverlay = styled.div`
   background-color: rgba(255, 255, 255, 0.8);
 `;
 
-interface GalleryImageProps {
+const VideoWrapper = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+`;
+
+const GalleryVideo = styled.video`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
+
+const VideoComponent = ({ url }: { url: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isError, setIsError] = useState(false);
+  const [loadingState, setLoadingState] = useState<'initial' | 'loading' | 'playing' | 'error'>('initial');
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleCanPlay = () => {
+      console.log('[TwoColumnGallery] Video can play:', url);
+      setLoadingState('playing');
+    };
+
+    const handleError = (e: Event) => {
+      const videoEl = e.target as HTMLVideoElement;
+      console.error('[TwoColumnGallery] Video error:', {
+        url,
+        error: videoEl.error,
+        networkState: videoEl.networkState,
+        readyState: videoEl.readyState,
+        currentSrc: videoEl.currentSrc
+      });
+      setIsError(true);
+      setLoadingState('error');
+    };
+
+    video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('error', handleError);
+
+    // Force load the video
+    video.load();
+    setLoadingState('loading');
+
+    return () => {
+      video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('error', handleError);
+    };
+  }, [url]);
+
+  if (isError) {
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#000',
+        color: '#fff',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div>
+          Error loading video
+          <button 
+            onClick={() => {
+              setIsError(false);
+              setLoadingState('initial');
+              const video = videoRef.current;
+              if (video) {
+                video.load();
+              }
+            }}
+            style={{
+              marginLeft: '10px',
+              padding: '5px 10px',
+              background: '#fff',
+              color: '#000',
+              border: 'none',
+              borderRadius: '4px'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <VideoWrapper>
+      <GalleryVideo
+        ref={videoRef}
+        playsInline={true}
+        autoPlay={true}
+        muted={true}
+        loop={true}
+        controls={false}
+        webkit-playsinline="true"
+        x5-playsinline="true"
+        x5-video-player-type="h5"
+        x5-video-player-fullscreen="true"
+      >
+        <source 
+          src={`${getProxiedMediaUrl(url)}#t=0.1`} 
+          type="video/mp4"
+        />
+      </GalleryVideo>
+      {loadingState === 'loading' && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: 'white'
+        }}>
+          Loading...
+        </div>
+      )}
+    </VideoWrapper>
+  );
+};
+
+interface GalleryMediaProps {
   item: GalleryData;
   index: number;
 }
 
-const GalleryImage = ({ item, index }: GalleryImageProps) => {
+const GalleryMedia = ({ item, index }: GalleryMediaProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const imageUrl = item.guid_rendered || item.guid || item.url;
@@ -109,17 +240,27 @@ const GalleryImage = ({ item, index }: GalleryImageProps) => {
   if (!imageUrl) return null;
   if (error) return <ErrorMessage>{error}</ErrorMessage>;
 
+  const isVideo = imageUrl.match(/\.(mp4|webm|mov)$/i) || 
+                 item.mime_type?.startsWith('video/') ||
+                 item.post_mime_type?.startsWith('video/');
+
+  console.log('[TwoColumnGallery] Media type determined:', { isVideo, imageUrl });
+
   return (
     <ImgDiv $isLoading={isLoading}>
-      <Img 
-        src={getProxiedMediaUrl(imageUrl)} 
-        alt={item.caption || item.post_title || ''}
-        crossOrigin="anonymous"
-        $isLoading={isLoading}
-        onLoad={() => setIsLoading(false)}
-        onError={() => setError('Failed to load image')}
-      />
-      {isLoading && (
+      {isVideo ? (
+        <VideoComponent url={imageUrl} />
+      ) : (
+        <Img 
+          src={getProxiedMediaUrl(imageUrl)} 
+          alt={item.caption || item.post_title || ''}
+          crossOrigin="anonymous"
+          $isLoading={isLoading}
+          onLoad={() => setIsLoading(false)}
+          onError={() => setError('Failed to load image')}
+        />
+      )}
+      {isLoading && !isVideo && (
         <LoadingOverlay>
           <Loading />
         </LoadingOverlay>
@@ -145,7 +286,7 @@ export default function TwoColumnGallery({ data }: TwoColumnGalleryProps) {
         return (
           <GalleryDiv key={galleryIndex}>
             {gallery.map((item: GalleryData, index: number) => (
-              <GalleryImage key={`${galleryIndex}-${index}`} item={item} index={index} />
+              <GalleryMedia key={`${galleryIndex}-${index}`} item={item} index={index} />
             ))}
           </GalleryDiv>
         );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
@@ -118,73 +118,223 @@ const GalleryImage = styled.img`
   object-fit: cover;
 `;
 
+const VideoWrapper = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  
+  @media (max-width: 768px) {
+    height: auto;
+    aspect-ratio: 16/9;
+  }
+`;
+
 const GalleryVideo = styled.video`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  
+  @media (max-width: 768px) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
 `;
+
+// Add debug logging function
+const debugLog = (message: string, ...args: any[]) => {
+  console.log(`[SwipeGallery] ${message}`, ...args);
+};
+
+const VideoComponent = ({ url }: { url: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isError, setIsError] = useState(false);
+  const [loadingState, setLoadingState] = useState<'initial' | 'loading' | 'playing' | 'error'>('initial');
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleCanPlay = () => {
+      console.log('[SwipeGallery] Video can play:', url);
+      setLoadingState('playing');
+    };
+
+    const handleError = (e: Event) => {
+      const videoEl = e.target as HTMLVideoElement;
+      console.error('[SwipeGallery] Video error:', {
+        url,
+        error: videoEl.error,
+        networkState: videoEl.networkState,
+        readyState: videoEl.readyState,
+        currentSrc: videoEl.currentSrc
+      });
+      setIsError(true);
+      setLoadingState('error');
+    };
+
+    const handleLoadStart = () => {
+      console.log('[SwipeGallery] Video load started:', url);
+    };
+
+    const handleLoadedMetadata = () => {
+      console.log('[SwipeGallery] Video metadata loaded:', url);
+    };
+
+    const handleLoadedData = () => {
+      console.log('[SwipeGallery] Video data loaded:', url);
+    };
+
+    video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('error', handleError);
+    video.addEventListener('loadstart', handleLoadStart);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('loadeddata', handleLoadedData);
+
+    // Force load the video
+    video.load();
+    setLoadingState('loading');
+
+    return () => {
+      video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('error', handleError);
+      video.removeEventListener('loadstart', handleLoadStart);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('loadeddata', handleLoadedData);
+    };
+  }, [url]);
+
+  if (isError) {
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#000',
+        color: '#fff',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div>
+          Error loading video
+          <button 
+            onClick={() => {
+              setIsError(false);
+              setLoadingState('initial');
+              const video = videoRef.current;
+              if (video) {
+                video.load();
+              }
+            }}
+            style={{
+              marginLeft: '10px',
+              padding: '5px 10px',
+              background: '#fff',
+              color: '#000',
+              border: 'none',
+              borderRadius: '4px'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <VideoWrapper>
+      <GalleryVideo
+        ref={videoRef}
+        playsInline={true}
+        autoPlay={true}
+        muted={true}
+        loop={true}
+        controls={false}
+        preload="auto"
+        webkit-playsinline="true"
+        x5-playsinline="true"
+        x5-video-player-type="h5"
+        x5-video-player-fullscreen="true"
+      >
+        <source 
+          src={`${getProxiedMediaUrl(url)}#t=0.1`} 
+          type="video/mp4"
+        />
+      </GalleryVideo>
+      {loadingState === 'loading' && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: 'white'
+        }}>
+          Loading...
+        </div>
+      )}
+    </VideoWrapper>
+  );
+};
 
 export default function SwipeGallery({ data }: SwipeGalleryProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadedItems, setLoadedItems] = useState<Set<string>>(new Set());
   
   useEffect(() => {
-    if (data) {
-      let loadedCount = 0;
-      const totalItems = data.length;
-
-      // Simulate checking if all media is loaded
-      Promise.all(
-        data.map(item => {
-          const url = item.guid || item.url || item.source_url;
-          if (!url) {
-            loadedCount++;
-            setLoadingProgress((loadedCount / totalItems) * 100);
-            return Promise.resolve(undefined);
-          }
-          
-          return new Promise<void>((resolve) => {
-            if (url.match(/\.(mp4|webm|mov)$/i)) {
-              // For videos
-              const video = document.createElement('video');
-              video.crossOrigin = "anonymous";
-              video.onloadeddata = () => {
-                loadedCount++;
-                setLoadingProgress((loadedCount / totalItems) * 100);
-                resolve();
-              };
-              video.onerror = () => {
-                loadedCount++;
-                setLoadingProgress((loadedCount / totalItems) * 100);
-                resolve();
-              };
-              video.src = getProxiedMediaUrl(url);
-            } else {
-              // For images
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              img.onload = () => {
-                loadedCount++;
-                setLoadingProgress((loadedCount / totalItems) * 100);
-                resolve();
-              };
-              img.onerror = () => {
-                loadedCount++;
-                setLoadingProgress((loadedCount / totalItems) * 100);
-                resolve();
-              };
-              img.src = getProxiedMediaUrl(url);
-            }
-          });
-        })
-      ).then(() => {
-        setIsLoading(false);
-      });
+    if (!data || data.length === 0) {
+      setIsLoading(false);
+      return;
     }
-  }, [data]);
+
+    const totalItems = data.length;
+    setLoadedItems(new Set());
+
+    // Mark items without URLs as loaded immediately
+    data.forEach(item => {
+      const url = item.guid || item.url || item.source_url;
+      if (!url) {
+        setLoadedItems(prev => {
+          const newSet = new Set(prev);
+          newSet.add('no-url');
+          return newSet;
+        });
+      }
+    });
+
+    // Update progress whenever loadedItems changes
+    const updateProgress = () => {
+      const loadedCount = loadedItems.size;
+      const progress = (loadedCount / totalItems) * 100;
+      setLoadingProgress(progress);
+      
+      if (loadedCount >= totalItems) {
+        console.log('[SwipeGallery] All items loaded');
+        setIsLoading(false);
+      }
+    };
+
+    // Initial progress update
+    updateProgress();
+
+  }, [data, loadedItems]);
+
+  const handleMediaLoaded = (url: string) => {
+    setLoadedItems(prev => {
+      const newSet = new Set(prev);
+      newSet.add(url);
+      return newSet;
+    });
+  };
 
   if (!data || data.length === 0) {
-    console.log('No gallery data provided');
+    console.log('[SwipeGallery] No gallery data provided');
     return null;
   }
 
@@ -193,11 +343,9 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
   }
 
   const renderMedia = (item: GalleryData) => {
-    console.log('Rendering media item:', item);
-    
     const url = item.guid || item.url || item.source_url;
     if (!url) {
-      console.log('No URL found for media item');
+      console.log('[SwipeGallery] No media URL found');
       return null;
     }
 
@@ -205,26 +353,21 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
                    item.mime_type?.startsWith('video/') ||
                    item.post_mime_type?.startsWith('video/');
 
-    if (isVideo) {
-      return (
-        <GalleryVideo
-          autoPlay
-          muted
-          loop
-          playsInline
-          crossOrigin="anonymous"
-        >
-          <source src={getProxiedMediaUrl(url)} type="video/mp4" />
-        </GalleryVideo>
-      );
-    }
+    console.log('[SwipeGallery] Media type determined:', { isVideo, url });
 
     return (
-      <GalleryImage 
-        src={getProxiedMediaUrl(url)} 
-        alt={item.post_title || ''} 
-        crossOrigin="anonymous"
-      />
+      <MediaContainer>
+        {isVideo ? (
+          <VideoComponent url={url} />
+        ) : (
+          <GalleryImage 
+            src={getProxiedMediaUrl(url)} 
+            alt={item.post_title || ''} 
+            onLoad={() => handleMediaLoaded(url)}
+            onError={() => handleMediaLoaded(url)} // Count errors as loaded to prevent infinite loading
+          />
+        )}
+      </MediaContainer>
     );
   };
 
@@ -251,9 +394,7 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
       >
         {data.map((item, index) => (
           <SwiperSlide key={index}>
-            <MediaContainer>
-              {renderMedia(item)}
-            </MediaContainer>
+            {renderMedia(item)}
           </SwiperSlide>
         ))}
       </Swiper>
