@@ -247,8 +247,19 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
             el: '.swiper-custom-pagination',
           }}
           loop={true}
-          slidesPerView={2.5}
           spaceBetween={20}
+          breakpoints={{
+            // when window width is >= 768px (desktop)
+            768: {
+              slidesPerView: 2.5,
+              spaceBetween: 20
+            },
+            // when window width is < 768px (mobile)
+            0: {
+              slidesPerView: 1.5,
+              spaceBetween: 10
+            }
+          }}
         >
           {items.map((item, index) => (
             <SwiperSlide key={item.ID || index}>
