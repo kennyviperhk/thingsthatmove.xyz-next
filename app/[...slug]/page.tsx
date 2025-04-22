@@ -20,9 +20,10 @@ import SwipeGallery from '@/components/post/SwipeGallery';
 const WORDPRESS_API_BASE = 'https://blog.thingsthatmove.xyz/wp-json';
 
 interface GalleryItem {
-  guid: string;
+  guid?: string;
+  guid_rendered?: string;
+  url: string;
   post_title?: string;
-  url?: string;
   caption?: string;
 }
 
@@ -75,8 +76,9 @@ const ErrorDisplay = styled.div`
 function normalizeGalleryData(gallery: any[]): GalleryItem[] {
   if (!gallery || !Array.isArray(gallery)) return [];
   return gallery.map(item => ({
-    guid: item.guid?.rendered || item.guid || item.url,
-    url: item.url,
+    guid: item.guid,
+    guid_rendered: item.guid?.rendered,
+    url: item.url || item.guid?.rendered || item.guid,
     post_title: item.post_title,
     caption: item.caption
   }));

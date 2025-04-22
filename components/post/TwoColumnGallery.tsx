@@ -6,10 +6,11 @@ import { getProxiedMediaUrl } from '@/lib/media';
 import Loading from '@/components/Loading';
 
 interface GalleryData {
-  guid: string;
-  url?: string;
+  guid?: string;
+  url: string;
   post_title?: string;
   caption?: string;
+  guid_rendered?: string;
 }
 
 interface TwoColumnGalleryProps {
@@ -103,7 +104,7 @@ interface GalleryImageProps {
 const GalleryImage = ({ item, index }: GalleryImageProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const imageUrl = item.guid || item.url;
+  const imageUrl = item.guid_rendered || item.guid || item.url;
 
   if (!imageUrl) return null;
   if (error) return <ErrorMessage>{error}</ErrorMessage>;
