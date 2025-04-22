@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import TriangleLanding from '@/components/TriangleLanding';
 import SwipeGallery from '@/components/post/SwipeGallery';
+import { default as BioText } from '@/components/BioTextSection/BioTextSection';
+import Loading from '@/components/Loading';
 
-const BioContainer = styled.article`
-  max-width: 800px;
+const Container = styled.article`
+  max-width: 100%;
   margin: 0 auto;
-  padding: 8rem 2rem;
   background: white;
   color: black;
 `;
@@ -24,7 +25,7 @@ const BioNameDiv = styled.div`
 `;
 
 const BioName = styled.h1`
-  font-family: "Archiv Grotesk", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+  font-family: var(--font-archiv-grotesk), -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
   font-size: 10.5vw;
   line-height: 10.5vw;
   z-index: 3;
@@ -87,13 +88,21 @@ interface BioData {
 export default function BioPage() {
   const [bioData, setBioData] = useState<BioData>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   useEffect(() => {
     const fetchBioData = async () => {
       try {
+        // Start loading animation
+        setLoadingProgress(20);
+        
         const response = await fetch('https://www.blog.thingsthatmove.xyz/wp-json/wp/v2/pages');
+        setLoadingProgress(60);
+        
         const pages = await response.json();
         const bioPage = pages.find((page: any) => page.slug === 'bio' || page.slug === 'about');
+        
+        setLoadingProgress(80);
         
         if (bioPage) {
           setBioData({
@@ -104,6 +113,8 @@ export default function BioPage() {
             gallery: bioPage.gallery || []
           });
         }
+        
+        setLoadingProgress(100);
       } catch (error) {
         console.error('Error fetching bio data:', error);
       } finally {
@@ -115,13 +126,13 @@ export default function BioPage() {
   }, []);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Loading progress={loadingProgress} />;
   }
 
   return (
     <>
-      <TriangleLanding title="ABOUT" backgroundColor="black" />
-      <BioContainer>
+      <TriangleLanding title="" backgroundColor="black" />
+      <Container>
         <BioNameDiv>
           <BioName>
             <div>THINGS</div>
@@ -130,22 +141,8 @@ export default function BioPage() {
           </BioName>
         </BioNameDiv>
         
-        <BioTextSection>
-          <TextMainDiv>
-            <TextSubDiv>
-              <div className="quote">{bioData.primary_quote}</div>
-              <div className="description">{bioData.primary_desc}</div>
-            </TextSubDiv>
-          </TextMainDiv>
-          
-          <TextMainDiv>
-            <TextSubDiv>
-              <div className="quote">{bioData.secondary_quote}</div>
-              <div className="description">{bioData.secondary_desc}</div>
-            </TextSubDiv>
-          </TextMainDiv>
-        </BioTextSection>
-      </BioContainer>
+        <BioText data={bioData} />
+      </Container>
       
       {bioData.gallery && bioData.gallery.length > 0 && (
         <SwipeGallery data={bioData.gallery} />

@@ -39,11 +39,15 @@ const GallerySection = styled.section`
     width: 100%;
     height: 100%;
     overflow: visible;
+    padding-bottom: 3rem; /* Add padding for pagination */
+    .swiper-wrapper {
+      pointer-events: auto;
+    }
   }
 
   .swiper-slide {
     text-align: center;
-    background: #000;
+    background: transparent;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -57,21 +61,65 @@ const GallerySection = styled.section`
 
   .swiper-button-next,
   .swiper-button-prev {
-    color: white;
+    color: black;
+    top: auto;
+    bottom: 2px;
+    margin-top: 0;
+    width: 30px;
+    height: 20px; /* Increased touch target */
+    pointer-events: auto;
+    cursor: pointer;
     &:after {
-      font-size: 24px;
+      font-size: 13px;
+      transform: translateY(-25%);
+      line-height: 1;
+      display: block;
     }
     @media (max-width: 768px) {
       display: none;
     }
   }
 
+  .swiper-button-prev {
+    left: 30%;
+  }
+
+  .swiper-button-next {
+    right: 30%;
+  }
+
+  .swiper-pagination {
+    bottom: 0 !important; /* Override Swiper's default positioning */
+  }
+
   .swiper-pagination-bullet {
-    background: white;
+    background: transparent;
+    margin: 0 6px;
+    width: 12px;
+    height: 12px;
+    position: relative;
+    opacity: 1;
+
+    &:before {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 10px solid #888;
+      left: 0;
+      top: 0;
+      transition: border-bottom-color 0.3s ease;
+    }
   }
 
   .swiper-pagination-bullet-active {
-    background: white;
+    background: transparent;
+    
+    &:before {
+      border-bottom-color: black;
+    }
   }
 `;
 
@@ -82,6 +130,7 @@ const MediaContainer = styled.div`
   justify-content: center;
   align-items: center;
   padding: 1rem;
+  background: transparent;
 `;
 
 const GalleryImage = styled.img`
