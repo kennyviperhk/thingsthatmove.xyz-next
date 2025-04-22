@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import Loading from '@/components/Loading';
@@ -63,6 +63,7 @@ interface PostData {
   is_exhibition_record?: string;
   is_related_post?: string;
   is_3d_model?: string;
+  is_secondary_two_column_gallery?: string;
   model_viewer?: string;
   model_height?: string;
   distance_between_the_ground?: string;
@@ -76,6 +77,8 @@ const PostArticle = styled.article`
   color: white;
   background: #000;
   padding: 2rem;
+  contain: content;
+  will-change: transform;
 `;
 
 const PostTitle = styled.h1`
@@ -84,6 +87,7 @@ const PostTitle = styled.h1`
   text-align: center;
   max-width: 1200px;
   color: white;
+  transform: translateZ(0);
 `;
 
 const ContentWrapper = styled.div`
@@ -91,6 +95,7 @@ const ContentWrapper = styled.div`
   margin: 0 auto;
   padding: 2rem;
   color: white;
+  contain: content;
 
   p {
     color: white;
@@ -108,6 +113,8 @@ const ContentWrapper = styled.div`
     max-width: 100%;
     height: auto;
     margin: 2rem 0;
+    aspect-ratio: attr(width) / attr(height);
+    contain: size layout;
   }
 `;
 
@@ -126,17 +133,13 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     async function loadPost() {
-      console.log('Starting to load post...');
       try {
         const pathParts = params.slug.filter(part => part !== 'post');
         const slug = pathParts.join('/');
         
-        console.log('Attempting to load post...');
-        console.log('Original path:', params.slug);
-        console.log('Processed slug:', slug);
-        
-        console.log('Making API request to:', `${WORDPRESS_API_BASE}/wp/v2/posts`);
         const response = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/posts`, {
           params: {
             slug,
@@ -144,68 +147,37 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
           }
         });
         
-        console.log('API Response status:', response.status);
         const data = response.data;
 
-        if (data && data.length > 0) {
-          const postData = data[0];
-          console.log('Post found:', postData);
-          console.log('Setting post data to state...');
-          setPost(postData);
+        if (data && data.length > 0 && mounted) {
+          setPost(data[0]);
           setError(null);
-        } else {
-          console.log('No post found with slug:', slug);
+        } else if (mounted) {
           throw new Error('Post not found');
         }
       } catch (error: any) {
-        console.error('Error loading post:', error);
-        if (axios.isAxiosError(error)) {
-          console.error('Axios error details:', {
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data,
-            config: {
-              url: error.config?.url,
-              params: error.config?.params
-            }
-          });
+        if (mounted) {
+          console.error('Error loading post:', error);
+          setError(error.message || 'Failed to load post');
         }
-        setError(error.message || 'Failed to load post');
       } finally {
-        console.log('Finishing post load attempt, setting loading to false');
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
-    console.log('Post page effect running, calling loadPost...');
     loadPost();
+    return () => {
+      mounted = false;
+    };
   }, [params.slug]);
 
-  useEffect(() => {
-    if (post) {
-      // Log rendering of components
-      if (post.is_tech === "1") {
-        console.log('Rendering TechInfo:', post.tech_info);
-      }
-      console.log('Rendering PostVideoText:', { concept: post.concept, video: post.main_documentation_video });
-      console.log('Rendering FullWidthGallery:', post.full_width_gallery);
-      if (post.is_secondary_desc === "1") {
-        console.log('Rendering secondary PostVideoText:', { concept: post.secondary_desc, video: post.secondary_documentation_video });
-      }
-      console.log('Rendering BigVerticalGallery:', post.big_vertical_gallery);
-      console.log('Rendering TwoColumnGallery:', post.two_column_gallery);
-    }
-  }, [post]);
+  const memoizedContent = useMemo(() => {
+    if (!post) return null;
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorDisplay>{error}</ErrorDisplay>;
-  if (!post) return <ErrorDisplay>Post not found</ErrorDisplay>;
-
-  return (
-    <PostArticle>
-      <PostTitle dangerouslySetInnerHTML={{ __html: post.title.rendered }} />
-      
-      <ContentWrapper>
+    return (
+      <>
         {post.is_tech === "1" && post.tech_info && (
           <TechInfo data={post.tech_info} />
         )}
@@ -237,7 +209,7 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
           <TwoColumnGallery data={post.two_column_gallery} />
         )}
 
-        {post.is_secondary_two_column === "1" && (
+        {post.is_secondary_two_column_gallery && Array.isArray(post.secondary_two_column_gallery) && (
           <TwoColumnGallery data={post.secondary_two_column_gallery} />
         )}
         
@@ -256,6 +228,19 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
             data3={post.distance_between_the_ground}
           />
         )}
+      </>
+    );
+  }, [post]);
+
+  if (loading) return <Loading />;
+  if (error) return <ErrorDisplay>{error}</ErrorDisplay>;
+  if (!post) return <ErrorDisplay>Post not found</ErrorDisplay>;
+
+  return (
+    <PostArticle>
+      <PostTitle dangerouslySetInnerHTML={{ __html: post.title.rendered }} />
+      <ContentWrapper>
+        {memoizedContent}
       </ContentWrapper>
     </PostArticle>
   );
