@@ -8,6 +8,7 @@ import Loading from '@/components/Loading';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import { getProxiedMediaUrl } from '@/lib/media';
 
 interface GalleryData {
   ID?: string;
@@ -61,35 +62,12 @@ const GallerySection = styled.section`
 
   .swiper-button-next,
   .swiper-button-prev {
-    color: black;
-    top: auto;
-    bottom: 2px;
-    margin-top: 0;
-    width: 30px;
-    height: 20px; /* Increased touch target */
-    pointer-events: auto;
-    cursor: pointer;
-    &:after {
-      font-size: 13px;
-      transform: translateY(-25%);
-      line-height: 1;
-      display: block;
-    }
-    @media (max-width: 768px) {
-      display: none;
-    }
-  }
-
-  .swiper-button-prev {
-    left: 30%;
-  }
-
-  .swiper-button-next {
-    right: 30%;
+    display: none;
   }
 
   .swiper-pagination {
-    bottom: 0 !important; /* Override Swiper's default positioning */
+    bottom: 0 !important;
+    mix-blend-mode: difference;
   }
 
   .swiper-pagination-bullet {
@@ -99,6 +77,7 @@ const GallerySection = styled.section`
     height: 12px;
     position: relative;
     opacity: 1;
+    mix-blend-mode: difference;
 
     &:before {
       content: '';
@@ -107,7 +86,7 @@ const GallerySection = styled.section`
       height: 0;
       border-left: 6px solid transparent;
       border-right: 6px solid transparent;
-      border-bottom: 10px solid #888;
+      border-bottom: 10px solid rgba(255, 255, 255, 0.5);
       left: 0;
       top: 0;
       transition: border-bottom-color 0.3s ease;
@@ -118,7 +97,7 @@ const GallerySection = styled.section`
     background: transparent;
     
     &:before {
-      border-bottom-color: black;
+      border-bottom-color: white;
     }
   }
 `;
@@ -168,6 +147,7 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
             if (url.match(/\.(mp4|webm|mov)$/i)) {
               // For videos
               const video = document.createElement('video');
+              video.crossOrigin = "anonymous";
               video.onloadeddata = () => {
                 loadedCount++;
                 setLoadingProgress((loadedCount / totalItems) * 100);
@@ -178,10 +158,11 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
                 setLoadingProgress((loadedCount / totalItems) * 100);
                 resolve();
               };
-              video.src = url;
+              video.src = getProxiedMediaUrl(url);
             } else {
               // For images
               const img = new Image();
+              img.crossOrigin = "anonymous";
               img.onload = () => {
                 loadedCount++;
                 setLoadingProgress((loadedCount / totalItems) * 100);
@@ -192,7 +173,7 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
                 setLoadingProgress((loadedCount / totalItems) * 100);
                 resolve();
               };
-              img.src = url;
+              img.src = getProxiedMediaUrl(url);
             }
           });
         })
@@ -231,16 +212,18 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
           muted
           loop
           playsInline
+          crossOrigin="anonymous"
         >
-          <source src={url} type="video/mp4" />
+          <source src={getProxiedMediaUrl(url)} type="video/mp4" />
         </GalleryVideo>
       );
     }
 
     return (
       <GalleryImage 
-        src={url} 
+        src={getProxiedMediaUrl(url)} 
         alt={item.post_title || ''} 
+        crossOrigin="anonymous"
       />
     );
   };
@@ -249,7 +232,6 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
     <GallerySection>
       <Swiper
         modules={[Navigation, Pagination]}
-        navigation
         pagination={{ clickable: true }}
         loop={true}
         slidesPerView="auto"

@@ -8,6 +8,7 @@ import Loading from '@/components/Loading';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import { getProxiedMediaUrl, getMediaType } from '@/lib/media';
 
 interface GalleryData {
   ID?: string;
@@ -132,6 +133,7 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
 
         if (url.match(/\.(mp4|webm|mov)$/i)) {
           const video = document.createElement('video');
+          video.crossOrigin = "anonymous";
           video.onloadeddata = () => {
             clearTimeout(timeoutId);
             resolve();
@@ -140,9 +142,10 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
             clearTimeout(timeoutId);
             reject();
           };
-          video.src = url;
+          video.src = getProxiedMediaUrl(url);
         } else {
           const img = new Image();
+          img.crossOrigin = "anonymous";
           img.onload = () => {
             clearTimeout(timeoutId);
             resolve();
@@ -151,7 +154,7 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
             clearTimeout(timeoutId);
             reject();
           };
-          img.src = url;
+          img.src = getProxiedMediaUrl(url);
         }
       });
 
@@ -249,12 +252,14 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
         loop
         muted
         playsInline
-        src={mediaUrl}
+        src={getProxiedMediaUrl(mediaUrl)}
         preload="metadata"
+        crossOrigin="anonymous"
       />
     ) : (
       <GalleryImage 
-        src={mediaUrl}
+        src={getProxiedMediaUrl(mediaUrl)}
+        crossOrigin="anonymous"
       />
     );
   };

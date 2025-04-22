@@ -1,168 +1,154 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import styled from 'styled-components';
+import { getProxiedMediaUrl } from '@/lib/media';
 import Loading from '@/components/Loading';
 
 interface GalleryData {
-  url: string;
+  guid: string;
+  url?: string;
+  post_title?: string;
   caption?: string;
 }
 
-interface MediaLoadingState {
-  isLoading: boolean;
-  failed: boolean;
-}
-
 interface TwoColumnGalleryProps {
-  data?: GalleryData[];
+  data?: GalleryData[] | GalleryData[][];
 }
 
 const GallerySection = styled.section`
-  width: 100%;
-  max-width: 1400px;
-  margin: 2rem auto;
-  padding: 0 1rem;
-
-  @media (min-width: 768px) {
-    padding: 0 2rem;
-  }
-`;
-
-const GalleryGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
+  background: transparent;
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
   gap: 2rem;
+  padding: 2rem 0;
+`;
 
-  @media (min-width: 768px) {
-    grid-template-columns: 1fr 1fr;
+const GalleryDiv = styled.div`
+  width: 100%;
+  display: flex;
+  flex-flow: row;
+  align-items: center;
+  padding: 0;
+  gap: 2px;
+
+  @media (orientation: portrait) {
+    padding: 0;
   }
 `;
 
-const GalleryImage = styled.img`
-  width: 100%;
-  height: auto;
-  display: block;
+interface StyledDivProps {
+  $isLoading: boolean;
+}
+
+const ImgDiv = styled.div<StyledDivProps>`
+  width: 50%;
+  line-height: 0;
+  position: relative;
+  background-color: ${props => props.$isLoading ? '#f0f0f0' : 'transparent'};
+  transition: background-color 0.3s ease;
+
+  &::before {
+    content: '';
+    display: block;
+    padding-top: 100%;
+  }
 `;
 
-const ImageCaption = styled.figcaption`
+const Img = styled.img<StyledDivProps>`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: ${props => props.$isLoading ? 0 : 1};
+  transition: opacity 0.3s ease;
+`;
+
+const ErrorMessage = styled.div`
+  color: #ff6b6b;
   text-align: center;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-  opacity: 0.8;
+  padding: 1rem;
+  background-color: #fff5f5;
+  border: 1px solid #ffc9c9;
+  margin: 1rem 0;
+  border-radius: 4px;
 `;
 
-const Figure = styled.figure`
-  margin: 0;
-  padding: 0;
-`;
-
-const LoadingContainer = styled.div`
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: #000;
+const LoadingOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: rgba(255, 255, 255, 0.8);
 `;
 
+interface GalleryImageProps {
+  item: GalleryData;
+  index: number;
+}
+
+const GalleryImage = ({ item, index }: GalleryImageProps) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const imageUrl = item.guid || item.url;
+
+  if (!imageUrl) return null;
+  if (error) return <ErrorMessage>{error}</ErrorMessage>;
+
+  return (
+    <ImgDiv $isLoading={isLoading}>
+      <Img 
+        src={getProxiedMediaUrl(imageUrl)} 
+        alt={item.caption || item.post_title || ''}
+        crossOrigin="anonymous"
+        $isLoading={isLoading}
+        onLoad={() => setIsLoading(false)}
+        onError={() => setError('Failed to load image')}
+      />
+      {isLoading && (
+        <LoadingOverlay>
+          <Loading />
+        </LoadingOverlay>
+      )}
+    </ImgDiv>
+  );
+};
+
 export default function TwoColumnGallery({ data }: TwoColumnGalleryProps) {
-  const [mediaStates, setMediaStates] = useState<Record<string, MediaLoadingState>>({});
+  if (!data || (Array.isArray(data) && data.length === 0)) {
+    return null;
+  }
 
-  const loadMediaItem = useCallback(async (url: string): Promise<boolean> => {
-    try {
-      setMediaStates(prev => ({
-        ...prev,
-        [url]: { isLoading: true, failed: false }
-      }));
-
-      await new Promise<void>((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('Loading timeout'));
-        }, 30000);
-
-        const img = new Image();
-        img.onload = () => {
-          clearTimeout(timeoutId);
-          resolve();
-        };
-        img.onerror = () => {
-          clearTimeout(timeoutId);
-          reject();
-        };
-        img.src = url;
-      });
-
-      setMediaStates(prev => ({
-        ...prev,
-        [url]: { isLoading: false, failed: false }
-      }));
-      return true;
-    } catch (error) {
-      setMediaStates(prev => ({
-        ...prev,
-        [url]: { isLoading: false, failed: true }
-      }));
-      return false;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!data) return;
-
-    // Initialize loading states
-    const initialStates: Record<string, MediaLoadingState> = {};
-    data.forEach(item => {
-      initialStates[item.url] = { isLoading: true, failed: false };
-    });
-    setMediaStates(initialStates);
-
-    // Load each media item
-    data.forEach(item => {
-      loadMediaItem(item.url);
-    });
-  }, [data, loadMediaItem]);
-
-  if (!data || data.length === 0) return null;
+  // Handle both single gallery and multiple galleries
+  const galleries = Array.isArray(data[0]) ? data as GalleryData[][] : [data] as GalleryData[][];
 
   return (
     <GallerySection>
-      <GalleryGrid>
-        {data.map((item, index) => {
-          const state = mediaStates[item.url] || { isLoading: true, failed: false };
+      {galleries.map((gallery: GalleryData[], galleryIndex: number) => {
+        // Skip empty galleries
+        if (!gallery || gallery.length === 0) return null;
 
-          if (state.isLoading) {
-            return (
-              <Figure key={index}>
-                <LoadingContainer>
-                  <Loading />
-                </LoadingContainer>
-              </Figure>
-            );
-          }
-
-          if (state.failed) {
-            return (
-              <Figure key={index}>
-                <LoadingContainer>
-                  <div style={{ color: 'white', textAlign: 'center' }}>
-                    Failed to load media
-                    <br />
-                    <button onClick={() => loadMediaItem(item.url)}>Retry</button>
-                  </div>
-                </LoadingContainer>
-              </Figure>
-            );
-          }
-
-          return (
-            <Figure key={index}>
-              <GalleryImage src={item.url} alt={item.caption || ''} />
-              {item.caption && <ImageCaption>{item.caption}</ImageCaption>}
-            </Figure>
-          );
-        })}
-      </GalleryGrid>
+        return (
+          <GalleryDiv key={galleryIndex}>
+            {gallery.map((item: GalleryData, index: number) => (
+              <GalleryImage key={`${galleryIndex}-${index}`} item={item} index={index} />
+            ))}
+          </GalleryDiv>
+        );
+      })}
     </GallerySection>
   );
 } 

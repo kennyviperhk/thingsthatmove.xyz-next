@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import Loading from '@/components/Loading';
+import { getProxiedMediaUrl, getMediaType } from '@/lib/media';
 
 interface GalleryData {
   ID?: string;
@@ -13,6 +14,9 @@ interface GalleryData {
   media_type?: string;
   mime_type?: string;
   post_title?: string;
+  title?: {
+    rendered: string;
+  };
 }
 
 interface BigVerticalGalleryProps {
@@ -72,7 +76,7 @@ const LoadingContainer = styled.div`
 `;
 
 const MAX_RETRIES = 3;
-const RETRY_DELAY = 2000;
+const RETRY_DELAY = 1000; // 1 second
 
 const isVideoUrl = (url: string) => {
   return /\.(mp4|webm|mov)$/i.test(url);
@@ -82,55 +86,68 @@ export default function BigVerticalGallery({ data }: BigVerticalGalleryProps) {
   const [mediaStates, setMediaStates] = useState<Record<string, MediaLoadingState>>({});
 
   const loadMediaItem = useCallback(async (url: string): Promise<boolean> => {
-    try {
-      setMediaStates(prev => ({
-        ...prev,
-        [url]: { isLoading: true, failed: false }
-      }));
+    const proxiedUrl = getProxiedMediaUrl(url);
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        setMediaStates(prev => ({
+          ...prev,
+          [url]: { isLoading: true, failed: false }
+        }));
 
-      await new Promise<void>((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('Loading timeout'));
-        }, 30000);
+        await new Promise<void>((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            reject(new Error('Loading timeout'));
+          }, 30000);
 
-        if (isVideoUrl(url)) {
-          const video = document.createElement('video');
-          video.onloadeddata = () => {
-            clearTimeout(timeoutId);
-            resolve();
-          };
-          video.onerror = (error) => {
-            clearTimeout(timeoutId);
-            reject(error);
-          };
-          video.src = url;
-        } else {
-          const img = new Image();
-          img.onload = () => {
-            clearTimeout(timeoutId);
-            resolve();
-          };
-          img.onerror = (error) => {
-            clearTimeout(timeoutId);
-            reject(error);
-          };
-          img.src = url;
+          if (isVideoUrl(url)) {
+            const video = document.createElement('video');
+            video.crossOrigin = "anonymous";
+            video.onloadeddata = () => {
+              clearTimeout(timeoutId);
+              resolve();
+            };
+            video.onerror = (error) => {
+              clearTimeout(timeoutId);
+              reject(error);
+            };
+            video.src = proxiedUrl;
+          } else {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+              clearTimeout(timeoutId);
+              resolve();
+            };
+            img.onerror = (error) => {
+              clearTimeout(timeoutId);
+              reject(error);
+            };
+            img.src = proxiedUrl;
+          }
+        });
+        
+        setMediaStates(prev => ({
+          ...prev,
+          [url]: { isLoading: false, failed: false }
+        }));
+        return true;
+      } catch (error) {
+        console.error(`Error loading media ${url} (attempt ${attempt + 1}/${MAX_RETRIES}):`, error);
+        
+        if (attempt < MAX_RETRIES - 1) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          continue;
         }
-      });
-      
-      setMediaStates(prev => ({
-        ...prev,
-        [url]: { isLoading: false, failed: false }
-      }));
-      return true;
-    } catch (error) {
-      console.error(`Error loading media ${url}:`, error);
-      setMediaStates(prev => ({
-        ...prev,
-        [url]: { isLoading: false, failed: true }
-      }));
-      return false;
+        
+        setMediaStates(prev => ({
+          ...prev,
+          [url]: { isLoading: false, failed: true }
+        }));
+        return false;
+      }
     }
+    return false;
   }, []);
 
   useEffect(() => {
@@ -158,58 +175,56 @@ export default function BigVerticalGallery({ data }: BigVerticalGalleryProps) {
 
   const items = Array.isArray(data) ? data : [data];
 
+  const renderMedia = (item: GalleryData) => {
+    const url = item.url || item.guid || item.source_url || '';
+    const proxiedUrl = getProxiedMediaUrl(url);
+    const mediaType = getMediaType(url, item.mime_type);
+    const state = mediaStates[url] || { isLoading: true, failed: false };
+
+    if (state.failed) {
+      return (
+        <div style={{ 
+          padding: '2rem', 
+          textAlign: 'center', 
+          background: 'rgba(255,0,0,0.1)',
+          color: 'white' 
+        }}>
+          Failed to load media. <button onClick={() => loadMediaItem(url)}>Retry</button>
+        </div>
+      );
+    }
+
+    if (state.isLoading) {
+      return (
+        <LoadingContainer>
+          <Loading />
+        </LoadingContainer>
+      );
+    }
+
+    return mediaType === 'video' ? (
+      <GalleryVideo 
+        autoPlay
+        loop
+        muted
+        playsInline
+        src={proxiedUrl}
+        preload="metadata"
+      />
+    ) : (
+      <GalleryImage 
+        src={proxiedUrl}
+        alt={item.title?.rendered || ''}
+      />
+    );
+  };
+
   return (
     <GallerySection>
       {items.map((item: GalleryData, index: number) => {
-        const url = item.url || item.guid || item.source_url || '';
-        const state = mediaStates[url] || { isLoading: true, failed: false };
-
-        if (state.failed) {
-          return (
-            <Figure key={index}>
-              <div style={{ 
-                padding: '2rem', 
-                textAlign: 'center', 
-                background: 'rgba(255,0,0,0.1)',
-                color: 'white' 
-              }}>
-                Failed to load media. <button onClick={() => loadMediaItem(url)}>Retry</button>
-              </div>
-            </Figure>
-          );
-        }
-
-        if (state.isLoading) {
-          return (
-            <Figure key={index}>
-              <LoadingContainer>
-                <Loading />
-              </LoadingContainer>
-            </Figure>
-          );
-        }
-
         return (
           <Figure key={index}>
-            {isVideoUrl(url) ? (
-              <GalleryVideo 
-                src={url} 
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="auto"
-                onClick={(e) => {
-                  if (e.currentTarget.paused) {
-                    e.currentTarget.play();
-                  } else {
-                    e.currentTarget.pause();
-                  }
-                }}
-              />
-            ) : (
-              <GalleryImage src={url} />
-            )}
+            {renderMedia(item)}
           </Figure>
         );
       })}

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import ReactPlayer from 'react-player/lazy';
 import Loading from '@/components/Loading';
+import { getProxiedMediaUrl } from '@/lib/media';
 
 interface PostVideoTextProps {
   concept?: string;
@@ -124,6 +125,7 @@ export default function PostVideoText({ concept, video, isSecondary = false }: P
 
         if (imageExtensions.includes(fileExtension || '')) {
           const img = new Image();
+          img.crossOrigin = "anonymous";
           img.onload = () => {
             clearTimeout(timeoutId);
             resolve();
@@ -132,9 +134,10 @@ export default function PostVideoText({ concept, video, isSecondary = false }: P
             clearTimeout(timeoutId);
             reject();
           };
-          img.src = url;
+          img.src = getProxiedMediaUrl(url);
         } else if (videoExtensions.includes(fileExtension || '')) {
           const video = document.createElement('video');
+          video.crossOrigin = "anonymous";
           video.onloadeddata = () => {
             clearTimeout(timeoutId);
             resolve();
@@ -143,7 +146,7 @@ export default function PostVideoText({ concept, video, isSecondary = false }: P
             clearTimeout(timeoutId);
             reject();
           };
-          video.src = url;
+          video.src = getProxiedMediaUrl(url);
         } else {
           // For external videos (YouTube, Vimeo), resolve immediately
           clearTimeout(timeoutId);
@@ -172,11 +175,11 @@ export default function PostVideoText({ concept, video, isSecondary = false }: P
     loadMediaItem(video).then(success => {
       if (success) {
         if (imageExtensions.includes(fileExtension || '')) {
-          setVideoElement(<img src={video} />);
+          setVideoElement(<img src={getProxiedMediaUrl(video)} crossOrigin="anonymous" />);
         } else if (videoExtensions.includes(fileExtension || '')) {
           setVideoElement(
-            <NativeVideo playsInline autoPlay muted loop>
-              <source src={`${video}#t=0.1`} type={`video/${fileExtension}`} />
+            <NativeVideo playsInline autoPlay muted loop crossOrigin="anonymous">
+              <source src={`${getProxiedMediaUrl(video)}#t=0.1`} type={`video/${fileExtension}`} />
             </NativeVideo>
           );
         } else if (ReactPlayer.canPlay(video)) {

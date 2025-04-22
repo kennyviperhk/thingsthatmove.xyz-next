@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import Loading from '@/components/Loading';
+import { notFound } from 'next/navigation';
+import { getPost } from '@/lib/api';
 
 // Import all the post components
 import PostVideoText from '@/components/post/PostVideoText';
@@ -17,6 +19,13 @@ import SwipeGallery from '@/components/post/SwipeGallery';
 
 const WORDPRESS_API_BASE = 'https://blog.thingsthatmove.xyz/wp-json';
 
+interface GalleryItem {
+  guid: string;
+  post_title?: string;
+  url?: string;
+  caption?: string;
+}
+
 interface PostData {
   id: number;
   title: {
@@ -28,11 +37,11 @@ interface PostData {
   concept?: string;
   main_documentation_video?: string;
   tech_info?: any;
-  full_width_gallery?: any;
-  big_vertical_gallery?: any;
-  two_column_gallery?: any;
-  secondary_two_column_gallery?: any;
-  swipe_gallery?: any;
+  full_width_gallery?: GalleryItem[];
+  big_vertical_gallery?: GalleryItem[];
+  two_column_gallery?: GalleryItem[];
+  secondary_two_column_gallery?: GalleryItem[];
+  swipe_gallery?: GalleryItem[];
   acknowledgment?: any;
   is_tech?: string;
   is_secondary_vid?: string;
@@ -47,6 +56,7 @@ interface PostData {
   distance_between_the_ground?: string;
   secondary_desc?: string;
   secondary_documentation_video?: string;
+  is_secondary_two_column?: string;
 }
 
 const PostArticle = styled.article`
@@ -61,67 +71,57 @@ const ErrorDisplay = styled.div`
   margin: 0 auto;
 `;
 
-export default function PostPage({ params }: { params: { slug: string[] } }) {
-  const [post, setPost] = useState<PostData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Helper function to normalize gallery data
+function normalizeGalleryData(gallery: any[]): GalleryItem[] {
+  if (!gallery || !Array.isArray(gallery)) return [];
+  return gallery.map(item => ({
+    guid: item.guid?.rendered || item.guid || item.url,
+    url: item.url,
+    post_title: item.post_title,
+    caption: item.caption
+  }));
+}
 
-  useEffect(() => {
-    const fetchPost = async () => {
-      try {
-        setIsLoading(true);
-        const slug = params.slug.join('/');
-        const response = await axios.get(`${WORDPRESS_API_BASE}/wp/v2/posts?slug=${slug}`);
-        if (response.data.length > 0) {
-          setPost(response.data[0]);
-        }
-      } catch (error: any) {
-        console.error('Error fetching post:', error);
-        setError(error.message || 'Failed to load post');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+export default async function PostPage({ params }: { params: { slug: string[] } }) {
+  const slug = params.slug.join('/');
+  console.log('Fetching post for slug:', slug);
 
-    fetchPost();
-  }, [params.slug]);
-
-  useEffect(() => {
-    if (post) {
-      // Log rendering of components
-      if (post.is_tech === "1") {
-        console.log('Rendering TechInfo:', post.tech_info);
-      }
-      console.log('Rendering PostVideoText:', { concept: post.concept, video: post.main_documentation_video });
-      console.log('Rendering FullWidthGallery:', post.full_width_gallery);
-      if (post.is_secondary_desc === "1") {
-        console.log('Rendering secondary PostVideoText:', { concept: post.secondary_desc, video: post.secondary_documentation_video });
-      }
-      console.log('Rendering BigVerticalGallery:', post.big_vertical_gallery);
-      console.log('Rendering TwoColumnGallery:', post.two_column_gallery);
-      if (post.is_swipe === "1") {
-        console.log('Rendering SwipeGallery:', post.swipe_gallery);
-      }
-      if (post.is_acknowledgment === "1") {
-        console.log('Rendering Acknowledgment:', post.acknowledgment);
-      }
-      if (post.is_3d_model === "1") {
-        console.log('Rendering ModelViewer:', { model: post.model_viewer, height: post.model_height, ground: post.distance_between_the_ground });
-      }
-    }
-  }, [post]);
-
-  if (isLoading) {
-    return <Loading />;
-  }
-
-  if (error) {
-    return <ErrorDisplay>{error}</ErrorDisplay>;
-  }
+  const post = await getPost(slug);
+  console.log('Raw post data:', {
+    is_secondary_two_column: post?.is_secondary_two_column,
+    secondary_two_column_gallery: post?.secondary_two_column_gallery,
+    acf: post?.acf,
+    custom_fields: post?.custom_fields,
+    meta: post?.meta
+  });
 
   if (!post) {
-    return <ErrorDisplay>Post not found</ErrorDisplay>;
+    notFound();
   }
+
+  // Transform all gallery data
+  const galleries = [];
+
+  // Add primary gallery if it exists
+  if (post.two_column_gallery && Array.isArray(post.two_column_gallery)) {
+    const normalizedPrimaryGallery = normalizeGalleryData(post.two_column_gallery);
+    if (normalizedPrimaryGallery.length > 0) {
+      galleries.push(normalizedPrimaryGallery);
+    }
+  }
+
+  // Add secondary gallery if it exists and is enabled
+  if (post.is_secondary_two_column === "1" && post.secondary_two_column_gallery && Array.isArray(post.secondary_two_column_gallery)) {
+    const normalizedSecondaryGallery = normalizeGalleryData(post.secondary_two_column_gallery);
+    if (normalizedSecondaryGallery.length > 0) {
+      galleries.push(normalizedSecondaryGallery);
+    }
+  }
+
+  console.log('Processed gallery data:', {
+    total_galleries: galleries.length,
+    galleries: galleries
+  });
 
   return (
     <PostArticle>
@@ -145,7 +145,10 @@ export default function PostPage({ params }: { params: { slug: string[] } }) {
       )}
       
       <BigVerticalGallery data={post.big_vertical_gallery} />
-      <TwoColumnGallery data={post.two_column_gallery} />
+      
+      {galleries.length > 0 && (
+        <TwoColumnGallery data={galleries} />
+      )}
       
       {post.is_swipe === "1" && (
         <SwipeGallery data={post.swipe_gallery} />

@@ -94,7 +94,7 @@ const ContentWrapper = styled.div`
 
   p {
     color: white;
-    font-size: 1.1rem;
+    font-size: 1.8rem;
     line-height: 1.6;
     margin-bottom: 1.5rem;
   }
