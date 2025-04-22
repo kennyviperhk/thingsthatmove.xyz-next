@@ -8,6 +8,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { getProxiedMediaUrl } from '@/lib/media';
+import { Swiper as SwiperType } from 'swiper';
 
 // Debug logger that only runs in development
 const debugLog = (message: string, ...args: any[]) => {
@@ -44,36 +45,42 @@ const GallerySection = styled.section`
   right: 50%;
   margin-left: -50vw;
   margin-right: -50vw;
+  height: 40vh;
+  overflow: visible;
 `;
 
 const MediaContainer = styled.div`
   width: 100%;
   position: relative;
-  aspect-ratio: 16/9;
-  background: #000;
+  height: 40vh;
+  background: transparent;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `;
 
 const GalleryImage = styled.img`
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
-  background: #000;
+  background: transparent;
 `;
 
 const GalleryVideo = styled.video`
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
-  background: #000;
+  background: transparent;
 `;
 
 const SwiperContainer = styled.div`
   width: 100%;
-  background: #000;
+  background: transparent;
   position: relative;
+  height: 100%;
 
   .swiper {
     width: 100%;
@@ -86,19 +93,52 @@ const SwiperContainer = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
+    background: transparent;
   }
 
   .swiper-button-prev,
   .swiper-button-next {
     color: white;
   }
+`;
+
+const PaginationContainer = styled.div`
+  width: 100%;
+  background: transparent;
+  padding: 1rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  mix-blend-mode: difference;
+
+  .swiper-custom-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
 
   .swiper-pagination-bullet {
-    background: white;
+    background: transparent;
+    opacity: 1;
+    margin: 0 5px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 10px solid #808080;
+    border-radius: 0;
+    mix-blend-mode: difference;
   }
 
   .swiper-pagination-bullet-active {
-    background: white;
+    opacity: 1;
+    border-bottom-color: white;
+  }
+
+  .swiper-button-prev,
+  .swiper-button-next {
+    mix-blend-mode: difference;
   }
 `;
 
@@ -194,15 +234,21 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
 
   debugLog(`Initializing gallery with ${items.length} items`);
 
+  const paginationRef = useRef<HTMLDivElement>(null);
+
   return (
     <GallerySection>
       <SwiperContainer>
         <Swiper
           modules={[Navigation, Pagination]}
           navigation
-          pagination={{ clickable: true }}
+          pagination={{
+            clickable: true,
+            el: '.swiper-custom-pagination',
+          }}
           loop={true}
-          slidesPerView={1}
+          slidesPerView={2.5}
+          spaceBetween={20}
         >
           {items.map((item, index) => (
             <SwiperSlide key={item.ID || index}>
@@ -211,6 +257,9 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
           ))}
         </Swiper>
       </SwiperContainer>
+      <PaginationContainer>
+        <div className="swiper-custom-pagination" ref={paginationRef} />
+      </PaginationContainer>
     </GallerySection>
   );
 } 
