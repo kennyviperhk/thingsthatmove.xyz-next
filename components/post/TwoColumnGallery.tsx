@@ -204,12 +204,16 @@ const VideoComponent = ({ url }: { url: string }) => {
       {isLoading && (
         <div style={{
           position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: 'white'
+          top: '0',
+          left: '0',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#000'
         }}>
-          Loading...
+          <Loading />
         </div>
       )}
     </VideoWrapper>

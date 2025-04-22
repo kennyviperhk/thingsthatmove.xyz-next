@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { getProxiedMediaUrl } from '@/lib/media';
+import Loading from '@/components/Loading';
 
 interface GalleryData {
   ID?: string;
@@ -67,7 +68,6 @@ const VideoComponent = ({ url }: { url: string }) => {
     if (!video) return;
 
     const handleCanPlay = () => {
-      debugLog(`Video ready to play: ${url}`);
       setIsLoading(false);
       setHasError(false);
     };
@@ -80,8 +80,6 @@ const VideoComponent = ({ url }: { url: string }) => {
 
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('error', handleError);
-
-    debugLog(`Initializing video: ${url}`);
 
     return () => {
       video.removeEventListener('canplay', handleCanPlay);
@@ -130,19 +128,37 @@ const VideoComponent = ({ url }: { url: string }) => {
   }
 
   return (
-    <GalleryVideo
-      ref={videoRef}
-      playsInline
-      autoPlay
-      muted
-      loop
-      data-webkit-playsinline="true"
-      data-x5-playsinline="true"
-      data-x5-video-player-type="h5"
-      data-x5-video-player-fullscreen="true"
-    >
-      <source src={getProxiedMediaUrl(url)} type="video/mp4" />
-    </GalleryVideo>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <GalleryVideo
+        ref={videoRef}
+        playsInline={true}
+        autoPlay={true}
+        muted={true}
+        loop={true}
+        controls={false}
+        data-webkit-playsinline="true"
+        data-x5-playsinline="true"
+        data-x5-video-player-type="h5"
+        data-x5-video-player-fullscreen="true"
+      >
+        <source src={getProxiedMediaUrl(url)} type="video/mp4" />
+      </GalleryVideo>
+      {isLoading && (
+        <div style={{
+          position: 'absolute',
+          top: '0',
+          left: '0',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#000'
+        }}>
+          <Loading />
+        </div>
+      )}
+    </div>
   );
 };
 
