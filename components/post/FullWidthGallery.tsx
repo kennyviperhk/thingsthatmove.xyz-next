@@ -12,7 +12,7 @@ import { getProxiedMediaUrl, getMediaType } from '@/lib/media';
 
 interface GalleryData {
   ID?: string;
-  guid?: string;
+  guid?: string | { rendered: string };
   url?: string;
   source_url?: string;
   post_mime_type?: string;
@@ -116,44 +116,28 @@ const LoadingContainer = styled.div`
   background: #000;
 `;
 
-// Add debug logging function
-const debugLog = (message: string, ...args: any[]) => {
-  console.log(`[FullWidthGallery] ${message}`, ...args);
-};
-
 const VideoComponent = ({ url }: { url: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isError, setIsError] = useState(false);
-  const [loadingState, setLoadingState] = useState<'initial' | 'loading' | 'playing' | 'error'>('initial');
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const handleCanPlay = () => {
-      console.log('[FullWidthGallery] Video can play:', url);
-      setLoadingState('playing');
+      setIsLoading(false);
+      setHasError(false);
     };
 
-    const handleError = (e: Event) => {
-      const videoEl = e.target as HTMLVideoElement;
-      console.error('[FullWidthGallery] Video error:', {
-        url,
-        error: videoEl.error,
-        networkState: videoEl.networkState,
-        readyState: videoEl.readyState,
-        currentSrc: videoEl.currentSrc
-      });
-      setIsError(true);
-      setLoadingState('error');
+    const handleError = () => {
+      console.error('[FullWidthGallery] Video failed to load:', url);
+      setIsLoading(false);
+      setHasError(true);
     };
 
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('error', handleError);
-
-    // Force load the video
-    video.load();
-    setLoadingState('loading');
 
     return () => {
       video.removeEventListener('canplay', handleCanPlay);
@@ -161,7 +145,7 @@ const VideoComponent = ({ url }: { url: string }) => {
     };
   }, [url]);
 
-  if (isError) {
+  if (hasError) {
     return (
       <div style={{ 
         width: '100%', 
@@ -178,8 +162,8 @@ const VideoComponent = ({ url }: { url: string }) => {
           Error loading video
           <button 
             onClick={() => {
-              setIsError(false);
-              setLoadingState('initial');
+              setHasError(false);
+              setIsLoading(true);
               const video = videoRef.current;
               if (video) {
                 video.load();
@@ -220,7 +204,7 @@ const VideoComponent = ({ url }: { url: string }) => {
           type="video/mp4"
         />
       </GalleryVideo>
-      {loadingState === 'loading' && (
+      {isLoading && (
         <div style={{
           position: 'absolute',
           top: '50%',
@@ -235,8 +219,86 @@ const VideoComponent = ({ url }: { url: string }) => {
   );
 };
 
+const MediaItem = ({ item }: { item: GalleryData }) => {
+  const mediaUrl = item.source_url || item.url || (typeof item.guid === 'string' ? item.guid : item.guid?.rendered);
+  if (!mediaUrl) return null;
+
+  const isVideo = item.post_mime_type?.startsWith('video/') || 
+                 item.media_type === 'video' || 
+                 item.mime_type?.startsWith('video/') ||
+                 mediaUrl.toLowerCase().match(/\.(mp4|webm|mov|avi)$/i) !== null;
+
+  return (
+    <MediaContainer>
+      {isVideo ? (
+        <VideoComponent url={mediaUrl} />
+      ) : (
+        <GalleryImage 
+          src={getProxiedMediaUrl(mediaUrl)}
+          alt={typeof item.post_title === 'string' ? item.post_title : ''}
+          loading="lazy"
+        />
+      )}
+    </MediaContainer>
+  );
+};
+
 export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
   const [mediaStates, setMediaStates] = useState<Record<string, MediaLoadingState>>({});
+  const mediaTypeCache = useRef<Record<string, { isVideo: boolean, mediaUrl: string }>>({});
+
+  const determineMediaType = useCallback((item: GalleryData) => {
+    const getMediaUrl = (item: GalleryData) => {
+      if (typeof item.guid === 'object' && item.guid?.rendered) {
+        return item.guid.rendered;
+      }
+      if (typeof item.guid === 'string') {
+        return item.guid;
+      }
+      return item.source_url || item.url;
+    };
+
+    const mediaUrl = getMediaUrl(item);
+    if (!mediaUrl) return null;
+
+    // Check cache first
+    if (mediaTypeCache.current[mediaUrl]) {
+      return mediaTypeCache.current[mediaUrl];
+    }
+
+    let isVideo = false;
+    if (item.post_mime_type) {
+      isVideo = item.post_mime_type.startsWith('video/');
+    } else if (item.media_type) {
+      isVideo = item.media_type === 'video';
+    } else if (item.mime_type) {
+      isVideo = item.mime_type.startsWith('video/');
+    } else {
+      isVideo = mediaUrl.toLowerCase().match(/\.(mp4|webm|mov|avi)$/i) !== null;
+    }
+
+    const result = { isVideo, mediaUrl };
+    mediaTypeCache.current[mediaUrl] = result;
+    return result;
+  }, []);
+
+  const renderMedia = useCallback((item: GalleryData) => {
+    const mediaType = determineMediaType(item);
+    if (!mediaType) {
+      return null;
+    }
+
+    const { isVideo, mediaUrl } = mediaType;
+
+    return isVideo ? (
+      <VideoComponent url={mediaUrl} />
+    ) : (
+      <GalleryImage 
+        src={getProxiedMediaUrl(mediaUrl)}
+        alt={typeof item.post_title === 'string' ? item.post_title : ''}
+      />
+    );
+  }, [determineMediaType]);
 
   const loadMediaItem = useCallback(async (url: string): Promise<boolean> => {
     try {
@@ -296,9 +358,9 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
 
     const items = Array.isArray(data) ? data : [data];
     const urls = items.map(item => {
-      const url = item.guid || item.url || item.source_url;
-      return url || '';
-    }).filter(url => url !== '');
+      const mediaType = determineMediaType(item);
+      return mediaType?.mediaUrl;
+    }).filter((url): url is string => typeof url === 'string');
 
     // Initialize loading states
     const initialStates: Record<string, MediaLoadingState> = {};
@@ -311,53 +373,12 @@ export default function FullWidthGallery({ data }: FullWidthGalleryProps) {
     urls.forEach(url => {
       loadMediaItem(url);
     });
-  }, [data, loadMediaItem]);
+  }, [data, loadMediaItem, determineMediaType]);
 
   if (!data) return null;
 
   const galleryItems = Array.isArray(data) ? data : Object.values(data);
   if (galleryItems.length === 0) return null;
-
-  const renderMedia = (item: any) => {
-    console.log('[FullWidthGallery] Rendering media:', item);
-
-    let mediaUrl = null;
-    if (item.guid?.rendered) {
-      mediaUrl = item.guid.rendered;
-    } else if (item.guid) {
-      mediaUrl = item.guid;
-    } else if (item.source_url) {
-      mediaUrl = item.source_url;
-    } else if (item.url) {
-      mediaUrl = item.url;
-    }
-
-    if (!mediaUrl) {
-      console.log('[FullWidthGallery] No media URL found');
-      return null;
-    }
-
-    let isVideo = false;
-    if (item.post_mime_type) {
-      isVideo = item.post_mime_type.startsWith('video/');
-    } else if (item.media_type) {
-      isVideo = item.media_type === 'video';
-    } else if (item.mime_type) {
-      isVideo = item.mime_type.startsWith('video/');
-    } else {
-      isVideo = mediaUrl.toLowerCase().match(/\.(mp4|webm|mov|avi)$/i) !== null;
-    }
-
-    console.log('[FullWidthGallery] Media type determined:', { isVideo, mediaUrl });
-
-    return isVideo ? (
-      <VideoComponent url={mediaUrl} />
-    ) : (
-      <GalleryImage 
-        src={getProxiedMediaUrl(mediaUrl)}
-      />
-    );
-  };
 
   return (
     <GallerySection>

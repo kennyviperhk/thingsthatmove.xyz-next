@@ -115,37 +115,26 @@ const GalleryVideo = styled.video`
 
 const VideoComponent = ({ url }: { url: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isError, setIsError] = useState(false);
-  const [loadingState, setLoadingState] = useState<'initial' | 'loading' | 'playing' | 'error'>('initial');
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const handleCanPlay = () => {
-      console.log('[TwoColumnGallery] Video can play:', url);
-      setLoadingState('playing');
+      setIsLoading(false);
+      setHasError(false);
     };
 
-    const handleError = (e: Event) => {
-      const videoEl = e.target as HTMLVideoElement;
-      console.error('[TwoColumnGallery] Video error:', {
-        url,
-        error: videoEl.error,
-        networkState: videoEl.networkState,
-        readyState: videoEl.readyState,
-        currentSrc: videoEl.currentSrc
-      });
-      setIsError(true);
-      setLoadingState('error');
+    const handleError = () => {
+      console.error('[TwoColumnGallery] Video failed to load:', url);
+      setIsLoading(false);
+      setHasError(true);
     };
 
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('error', handleError);
-
-    // Force load the video
-    video.load();
-    setLoadingState('loading');
 
     return () => {
       video.removeEventListener('canplay', handleCanPlay);
@@ -153,7 +142,7 @@ const VideoComponent = ({ url }: { url: string }) => {
     };
   }, [url]);
 
-  if (isError) {
+  if (hasError) {
     return (
       <div style={{ 
         width: '100%', 
@@ -170,8 +159,8 @@ const VideoComponent = ({ url }: { url: string }) => {
           Error loading video
           <button 
             onClick={() => {
-              setIsError(false);
-              setLoadingState('initial');
+              setHasError(false);
+              setIsLoading(true);
               const video = videoRef.current;
               if (video) {
                 video.load();
@@ -212,7 +201,7 @@ const VideoComponent = ({ url }: { url: string }) => {
           type="video/mp4"
         />
       </GalleryVideo>
-      {loadingState === 'loading' && (
+      {isLoading && (
         <div style={{
           position: 'absolute',
           top: '50%',
@@ -235,24 +224,22 @@ interface GalleryMediaProps {
 const GalleryMedia = ({ item, index }: GalleryMediaProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const imageUrl = item.guid_rendered || item.guid || item.url;
+  const mediaUrl = item.guid_rendered || item.guid || item.url;
 
-  if (!imageUrl) return null;
+  if (!mediaUrl) return null;
   if (error) return <ErrorMessage>{error}</ErrorMessage>;
 
-  const isVideo = imageUrl.match(/\.(mp4|webm|mov)$/i) || 
+  const isVideo = mediaUrl.match(/\.(mp4|webm|mov)$/i) || 
                  item.mime_type?.startsWith('video/') ||
                  item.post_mime_type?.startsWith('video/');
-
-  console.log('[TwoColumnGallery] Media type determined:', { isVideo, imageUrl });
 
   return (
     <ImgDiv $isLoading={isLoading}>
       {isVideo ? (
-        <VideoComponent url={imageUrl} />
+        <VideoComponent url={mediaUrl} />
       ) : (
         <Img 
-          src={getProxiedMediaUrl(imageUrl)} 
+          src={getProxiedMediaUrl(mediaUrl)} 
           alt={item.caption || item.post_title || ''}
           crossOrigin="anonymous"
           $isLoading={isLoading}
