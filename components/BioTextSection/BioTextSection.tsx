@@ -92,13 +92,13 @@ const TxtSubDivR = styled.div`
 `;
 
 const QuoteP = styled.p`
-  font-size: 1.5rem;
+  font-size: 2.0rem;
   font-weight: 500;
   margin-bottom: 1rem;
 `;
 
 const DescP = styled.p`
-  font-size: 1.125rem;
+  font-size: 1.825rem;
   line-height: 1.6;
   white-space: pre-line;
 `;

@@ -65,13 +65,13 @@ const TextSubDiv = styled.div`
   flex: 1;
   
   .quote {
-    font-size: 1.5rem;
+    font-size: 2.5rem;
     font-weight: 500;
     margin-bottom: 1rem;
   }
   
   .description {
-    font-size: 1.125rem;
+    font-size: 2.125rem;
     line-height: 1.6;
     white-space: pre-line;
   }

@@ -17,6 +17,9 @@ const LandingSection = styled.section`
   position: relative;
   @media(orientation: portrait) {
     height: ${sectionHeightPortrait};
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
   }
 `;
 
@@ -34,11 +37,17 @@ const TextLoopDiv = styled.div`
   mix-blend-mode: normal;
   overflow: hidden;
   @media(orientation: portrait) {
-    height: ${sectionHeightPortrait};
+    height: auto;
+    position: relative;
+    padding: 15vh 20px;
+    margin-bottom: 2rem;
   }
   & div {
     & div {
-      width: 100vw;
+      width: 100%;
+      @media(orientation: portrait) {
+        padding: 0 15px;
+      }
     }
   }
 `;
@@ -55,8 +64,10 @@ const MyName = styled.h1`
   display: flex;
   @media(orientation: portrait) {
     display: block;
-    font-size: 15.5vw;
-    padding-top: 150px;
+    font-size: 13vw;
+    line-height: 1.3;
+    margin: 0;
+    padding: 0;
   }
 `;
 
@@ -64,7 +75,7 @@ const BgH1Span = styled.div`
   padding: 0 50px;
   transition: all 1.0s;
   @media(orientation: portrait) {
-    padding: 0 0;
+    padding: 0;
   }
 `;
 
@@ -83,8 +94,9 @@ const NumbersDeco = styled.span`
     font-weight: 200;
   }
   @media(orientation: portrait) {
-    display: none;
-    top: calc(${sectionHeightPortrait} * 0.35);
+    top: auto;
+    bottom: 10vh;
+    font-size: 0.8rem;
   }
 `;
 
@@ -95,7 +107,8 @@ const MyNameBottomLine = styled.span`
   position: absolute;
   top: calc(${sectionHeight} * 0.75);
   @media(orientation: portrait) {
-    top: calc(${sectionHeightPortrait} * 0.80);
+    top: auto;
+    bottom: 8vh;
   }
 `;
 
