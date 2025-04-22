@@ -10,10 +10,28 @@ const HeaderContainer = styled.header<{ $isLight: boolean }>`
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 9999;
   padding: 1rem 2rem;
   background: transparent;
-  mix-blend-mode: difference;
+  pointer-events: auto;
+  touch-action: manipulation;
+  @media (max-width: 768px) {
+    padding: 0.5rem 1rem;
+    mix-blend-mode: normal;
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.2);
+      z-index: -1;
+    }
+  }
+  @media (min-width: 769px) {
+    mix-blend-mode: difference;
+  }
 `;
 
 const Nav = styled.nav`
@@ -23,6 +41,7 @@ const Nav = styled.nav`
   gap: 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  pointer-events: auto;
 `;
 
 const NavLink = styled(Link)<{ $isLight: boolean }>`
@@ -34,9 +53,38 @@ const NavLink = styled(Link)<{ $isLight: boolean }>`
     0 0 5px rgba(255, 255, 255, 0.5),
     0 0 10px rgba(255, 255, 255, 0.4),
     0 0 15x rgba(255, 255, 255, 0.3);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  user-select: none;
   
   &:hover {
     opacity: 0.8;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+    padding: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    position: relative;
+    touch-action: manipulation;
+    
+    &:active {
+      opacity: 0.6;
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      z-index: 1;
+    }
   }
 `;
 
@@ -69,21 +117,30 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [pathname]);
 
+  const handleClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const href = (e.currentTarget as HTMLAnchorElement).getAttribute('href');
+    if (href) {
+      window.location.href = href;
+    }
+  };
+
   return (
     <HeaderContainer $isLight={isLight}>
       <Nav>
         <LeftSection>
-          <NavLink href="/bio" $isLight={isLight}>About</NavLink>
+          <NavLink href="/bio" $isLight={isLight} onClick={handleClick}>About</NavLink>
         </LeftSection>
         <CenterSection>
-          <NavLink href="/" $isLight={isLight}>TTM</NavLink>
+          <NavLink href="/" $isLight={isLight} onClick={handleClick}>TTM</NavLink>
         </CenterSection>
         <RightSection>
-          <NavLink href="/category/projects" $isLight={isLight}>Projects</NavLink>
+          <NavLink href="/category/projects" $isLight={isLight} onClick={handleClick}>Projects</NavLink>
         </RightSection>
       </Nav>
     </HeaderContainer>
   );
 };
 
-export default Header; 
+export default Header;
