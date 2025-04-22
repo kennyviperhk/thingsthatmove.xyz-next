@@ -21,6 +21,11 @@ interface Project {
     'wp:featuredmedia'?: Array<{
       source_url: string;
     }>;
+    'wp:term'?: Array<Array<{
+      id: number;
+      name: string;
+      slug: string;
+    }>>;
   };
 }
 
@@ -38,16 +43,32 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 const ProjectsContainer = styled.div`
-  padding: 120px 2rem 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 2rem;
   min-height: 100vh;
-  position: relative;
-  z-index: 1;
+  background: black;
+  color: white;
+`;
+
+const CategoryFilters = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+`;
+
+const CategoryButton = styled.button<{ $isActive: boolean }>`
+  padding: 0.75rem 1.5rem;
+  background: ${props => props.$isActive ? 'white' : 'transparent'};
+  color: ${props => props.$isActive ? 'black' : 'white'};
+  border: 1px solid white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
   
-  h1 {
-    font-size: clamp(2rem, 4vw, 3rem);
-    margin-bottom: 2rem;
+  &:hover {
+    background: ${props => props.$isActive ? 'white' : 'rgba(255, 255, 255, 0.1)'};
   }
 `;
 
@@ -149,10 +170,35 @@ const InitialLoadingContainer = styled.div`
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mediaStates, setMediaStates] = useState<Record<string, MediaLoadingState>>({});
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  const categories = [
+    { id: 'interactive-digital', label: 'Interactive Digital' },
+    { id: 'kinetics-robotics', label: 'Kinetics & Robotics' },
+    { id: 'tech-research', label: 'Tech Research' }
+  ];
+
+  const filterProjects = useCallback((category: string | null) => {
+    if (!category) {
+      setFilteredProjects(projects);
+      return;
+    }
+
+    const filtered = projects.filter(project => {
+      const projectCategories = project._embedded?.['wp:term']?.[0] || [];
+      return projectCategories.some((cat: any) => cat.slug === category);
+    });
+    setFilteredProjects(filtered);
+  }, [projects]);
+
+  useEffect(() => {
+    filterProjects(activeCategory);
+  }, [activeCategory, filterProjects]);
 
   const loadMediaItem = useCallback(async (url: string): Promise<boolean> => {
     try {
@@ -221,6 +267,7 @@ export default function ProjectsPage() {
         
         setLoadingProgress(70);
         setProjects(data);
+        setFilteredProjects(data);
 
         // Initialize media loading states
         const mediaUrls = data
@@ -264,6 +311,23 @@ export default function ProjectsPage() {
       </ProgressBarContainer>
       <ProjectsContainer>
         <h1>Projects</h1>
+        <CategoryFilters>
+          <CategoryButton 
+            onClick={() => setActiveCategory(null)}
+            $isActive={activeCategory === null}
+          >
+            All Projects
+          </CategoryButton>
+          {categories.map(category => (
+            <CategoryButton
+              key={category.id}
+              onClick={() => setActiveCategory(category.id)}
+              $isActive={activeCategory === category.id}
+            >
+              {category.label}
+            </CategoryButton>
+          ))}
+        </CategoryFilters>
         {error && <ErrorMessage>{error}</ErrorMessage>}
         {loading && projects.length === 0 ? (
           <InitialLoadingContainer>
@@ -271,7 +335,7 @@ export default function ProjectsPage() {
           </InitialLoadingContainer>
         ) : (
           <ProjectsGrid>
-            {projects.map((project) => {
+            {filteredProjects.map((project) => {
               const imageUrl = project._embedded?.['wp:featuredmedia']?.[0]?.source_url;
               const mediaState = imageUrl ? mediaStates[imageUrl] : null;
 
