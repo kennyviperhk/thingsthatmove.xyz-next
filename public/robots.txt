@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://www.thingsthatmove.xyz/sitemap.xml
+
+# Optimize crawling
+Crawl-delay: 10
+
+# Prevent duplicate content
+Disallow: /*?* 

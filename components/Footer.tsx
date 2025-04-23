@@ -21,6 +21,10 @@ const BackToTop = () => {
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const arrowLink = "https://blog.thingsthatmove.xyz/wp-content/uploads/2022/03/arrowUpWhite.svg";
+  
+  // Email obfuscation
+  const encodedEmail = "&#109;&#101;&#64;&#116;&#104;&#105;&#110;&#103;&#115;&#116;&#104;&#97;&#116;&#109;&#111;&#118;&#101;&#46;&#120;&#121;&#122;";
+  const mailtoLink = "mailto:me@thingsthatmove.xyz".split('').map(char => '&#' + char.charCodeAt(0) + ';').join('');
 
   return (
     <SiteFooter role="contentinfo">
@@ -35,34 +39,41 @@ const Footer = () => {
       </FooterBackground>
       
       <SiteFooterInner>
-        <CollaborateSection>
+        <TopSection>
           <BigTxt>LET&apos;S COLLABORATE</BigTxt>
-          <EmailLink>
-            <Image src={arrowLink} alt="email arrow" width={16} height={16} />
-            <span>me@thingsthatmove.xyz</span>
-          </EmailLink>
-        </CollaborateSection>
+          <EmailLink 
+            href={`mailto:me@thingsthatmove.xyz`}
+            dangerouslySetInnerHTML={{
+              __html: `
+                <img src="${arrowLink}" alt="email arrow" width="16" height="16" style="margin-right: 0.5rem;" />
+                <span>${encodedEmail}</span>
+              `
+            }}
+          />
+        </TopSection>
 
-        <SocialLinks>
-          <SocialLink href="https://www.facebook.com/thingsthatmove.xyz/" target="_blank">
-            Facebook
-          </SocialLink>
-          <SocialDivider />
-          <SocialLink href="https://www.instagram.com/thingsthatmove.xyz/" target="_blank">
-            Instagram
-          </SocialLink>
-          <SocialDivider />
-          <SocialLink href="https://vimeo.com/thingsthatmove" target="_blank">
-            Vimeo
-          </SocialLink>
-        </SocialLinks>
+        <BottomSection>
+          <SocialLinks>
+            <SocialLink href="https://www.facebook.com/thingsthatmove.xyz/" target="_blank">
+              Facebook
+            </SocialLink>
+            <SocialDivider />
+            <SocialLink href="https://www.instagram.com/thingsthatmove.xyz/" target="_blank">
+              Instagram
+            </SocialLink>
+            <SocialDivider />
+            <SocialLink href="https://vimeo.com/thingsthatmove" target="_blank">
+              Vimeo
+            </SocialLink>
+          </SocialLinks>
 
-        <BottomBar>
-          <Copyright>
-            © {currentYear} Things That Move Ltd.
-          </Copyright>
-          <BackToTop />
-        </BottomBar>
+          <BottomBar>
+            <Copyright>
+              © {currentYear} Things That Move Ltd.
+            </Copyright>
+            <BackToTop />
+          </BottomBar>
+        </BottomSection>
       </SiteFooterInner>
     </SiteFooter>
   );
@@ -75,7 +86,12 @@ const SiteFooter = styled.footer`
   background-color: black;
   color: white;
   overflow: hidden;
-  padding-top: 10rem;
+  padding-top: 5rem;
+
+  @media (max-width: 768px) {
+    height: 40vh;
+    padding-top: 5rem;
+  }
 `;
 
 const FooterBackground = styled.div`
@@ -83,6 +99,7 @@ const FooterBackground = styled.div`
   width: 100%;
   height: 100%;
   z-index: 1;
+  top: 0;
   &::after {
     content: '';
     position: absolute;
@@ -101,25 +118,51 @@ const SiteFooterInner = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 4rem 2rem;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
 `;
 
-const CollaborateSection = styled.div`
+const TopSection = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  margin-top: 4rem;
+  gap: 1.5rem;
+  margin-top: -3rem;
+
+  @media (max-width: 768px) {
+    align-items: flex-start;
+    gap: 2rem;
+    margin-top: 0;
+  }
+`;
+
+const BottomSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    gap: 2rem;
+    margin-bottom: 1rem;
+  }
 `;
 
 const BigTxt = styled.h1`
   font-family: "Archiv Grotesk", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
-  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-size: clamp(3.5rem, 5vw, 5rem);
   font-weight: 400;
   letter-spacing: 0.1em;
   color: white;
   text-align: center;
   margin: 0;
+  line-height: 1;
+
+  @media (max-width: 768px) {
+    font-size: 3rem;
+    text-align: left;
+  }
 `;
 
 const EmailLink = styled.a`
@@ -128,15 +171,24 @@ const EmailLink = styled.a`
   gap: 0.5rem;
   color: white;
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 1.2rem;
   letter-spacing: 0.05em;
   
   &:hover {
     text-decoration: underline;
   }
   
+  img {
+    display: inline-block;
+    vertical-align: middle;
+  }
+
   span {
     margin-top: 2px;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.4rem;
   }
 `;
 
@@ -145,8 +197,14 @@ const SocialLinks = styled.div`
   align-items: center;
   justify-content: center;
   gap: 2rem;
-  margin: 2rem 0;
   width: 100%;
+  margin: 2rem 0;
+
+  @media (max-width: 768px) {
+    justify-content: flex-start;
+    gap: 1.5rem;
+    margin: 1rem 0;
+  }
 `;
 
 const SocialLink = styled(Link)`
@@ -159,6 +217,10 @@ const SocialLink = styled(Link)`
   &:hover {
     opacity: 0.8;
   }
+
+  @media (max-width: 768px) {
+    font-size: 1.2rem;
+  }
 `;
 
 const SocialDivider = styled.div`
@@ -168,7 +230,7 @@ const SocialDivider = styled.div`
   opacity: 0.5;
 
   @media (max-width: 768px) {
-    width: 2rem;
+    width: 3rem;
   }
 `;
 
@@ -177,14 +239,21 @@ const BottomBar = styled.div`
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 0 2rem;
-  margin-bottom: 2rem;
+  padding: 0;
+
+  @media (max-width: 768px) {
+    margin-top: auto;
+  }
 `;
 
 const Copyright = styled.p`
   font-size: 0.9rem;
   opacity: 0.8;
   margin: 0;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
 `;
 
 const ToTopLink = styled.a`
@@ -196,6 +265,10 @@ const ToTopLink = styled.a`
 
   &:hover {
     opacity: 1;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
   }
 `;
 

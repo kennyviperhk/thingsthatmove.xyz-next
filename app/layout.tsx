@@ -10,8 +10,48 @@ import { archivGrotesk } from './styles/fonts';
 const GoogleTagManagerNoscript = dynamic(() => import('@/components/GoogleTagManagerNoscript'), { ssr: false });
 
 export const metadata: Metadata = {
-  title: "Things That Move Ltd.",
-  description: "Artwork, Design, Technology",
+  title: "Things That Move | Kinetic Art & Interactive Design Studio",
+  description: "Award-winning creative technology studio specializing in kinetic art, interactive design, robotics, and technical consultancy. We bring motion and innovation to life through art and technology.",
+  keywords: "kinetic art, interactive design, robotics, technical consultancy, creative technology, art installation, motion design, Things That Move",
+  openGraph: {
+    title: "Things That Move | Kinetic Art & Interactive Design Studio",
+    description: "Award-winning creative technology studio specializing in kinetic art, interactive design, robotics, and technical consultancy.",
+    url: "https://www.thingsthatmove.xyz",
+    siteName: "Things That Move",
+    images: [
+      {
+        url: "https://www.blog.thingsthatmove.xyz/wp-content/uploads/2022/03/image-4_s.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Things That Move Studio",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Things That Move | Kinetic Art & Interactive Design Studio",
+    description: "Award-winning creative technology studio specializing in kinetic art, interactive design, robotics, and technical consultancy.",
+    images: ["https://www.blog.thingsthatmove.xyz/wp-content/uploads/2022/03/image-4_s.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: "YOUR-GOOGLE-VERIFICATION-CODE",
+  },
+  alternates: {
+    canonical: "https://www.thingsthatmove.xyz",
+  },
 };
 
 export default function RootLayout({
