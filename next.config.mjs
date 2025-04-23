@@ -5,8 +5,9 @@ const nextConfig = {
     styledComponents: true,
   },
   images: {
-    domains: ['blog.thingsthatmove.xyz'],
-    unoptimized: true, // This allows local images without optimization
+    domains: ['blog.thingsthatmove.xyz', 'www.blog.thingsthatmove.xyz'],
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
   },
   async headers() {
     return [
@@ -16,11 +17,27 @@ const nextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600, must-revalidate'
           }
         ],
       },
+      {
+        source: '/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          }
+        ],
+      }
     ]
   },
+  poweredByHeader: false,
+  compress: true,
+  swcMinify: true,
 }
 
 export default nextConfig 

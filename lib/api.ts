@@ -1,5 +1,68 @@
 // lib/api.ts
+import useSWR from 'swr'
+import axios from 'axios'
+
 const WP_API_URL = 'https://blog.thingsthatmove.xyz/wp-json/wp/v2';
+
+const fetcher = async (url: string) => {
+  const res = await axios.get(url)
+  return res.data
+}
+
+// Reusable SWR hook for WordPress API calls
+export function useWordPressData(endpoint: string, options = {}) {
+  const { data, error, isLoading, mutate } = useSWR(
+    `${process.env.WORDPRESS_API_URL}${endpoint}`,
+    fetcher,
+    {
+      revalidateOnFocus: false, // Don't revalidate on tab focus
+      revalidateOnReconnect: true, // Revalidate when browser regains connection
+      dedupingInterval: 60000, // Dedupe requests within 1 minute
+      ...options,
+    }
+  )
+
+  return {
+    data,
+    error,
+    isLoading,
+    mutate, // Function to manually revalidate data
+  }
+}
+
+// Cache-first fetcher for static data
+export async function fetchWithCache(endpoint: string) {
+  const cacheKey = `wp_cache_${endpoint}`
+  
+  // Check if data exists in localStorage
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(cacheKey)
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached)
+      // Return cached data if it's less than 1 hour old
+      if (Date.now() - timestamp < 3600000) {
+        return data
+      }
+    }
+  }
+
+  // If no cache or expired, fetch fresh data
+  const response = await axios.get(`${process.env.WORDPRESS_API_URL}${endpoint}`)
+  const data = response.data
+
+  // Save to cache
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(
+      cacheKey,
+      JSON.stringify({
+        data,
+        timestamp: Date.now(),
+      })
+    )
+  }
+
+  return data
+}
 
 export async function getProjects() {
   const res = await fetch(`${WP_API_URL}/posts?categories=projects`);

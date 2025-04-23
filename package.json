@@ -21,7 +21,8 @@
     "react-fast-marquee": "^1.6.5",
     "react-player": "^2.16.0",
     "styled-components": "^6.1.17",
-    "swiper": "^11.2.6"
+    "swiper": "^11.2.6",
+    "swr": "^2.3.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

@@ -127,9 +127,7 @@ const ProjectCard = styled(Link)`
   transition: transform 0.2s ease;
   backdrop-filter: blur(10px);
   display: block;
-  animation: ${fadeInScale} 0.7s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
-  animation-delay: var(--random-delay);
-  opacity: 0;
+  animation: ${fadeInScale} 0.6s ease forwards;
   
   &:hover {
     transform: translateY(-4px);
@@ -385,16 +383,14 @@ export default function ProjectsPage() {
           </InitialLoadingContainer>
         ) : (
           <ProjectsGrid>
-            {filteredProjects.map((project, index) => {
+            {filteredProjects.map((project) => {
               const imageUrl = project._embedded?.['wp:featuredmedia']?.[0]?.source_url;
               const mediaState = imageUrl ? mediaStates[imageUrl] : null;
-              const randomDelay = Math.random() * 0.5; // Random delay between 0 and 0.3 seconds
 
               return (
                 <ProjectCard 
                   key={`${activeCategory || 'all'}-${project.id}`} 
                   href={`/post/${project.slug}`}
-                  style={{ '--random-delay': `${randomDelay}s` } as React.CSSProperties}
                 >
                   {imageUrl ? (
                     mediaState?.isLoading ? (

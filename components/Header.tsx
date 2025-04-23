@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import styled from 'styled-components';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const HeaderContainer = styled.header<{ $isLight: boolean }>`
@@ -102,6 +102,7 @@ const RightSection = styled.div`
 
 const Header = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const [isLight, setIsLight] = useState(false);
 
   useEffect(() => {
@@ -122,7 +123,7 @@ const Header = () => {
     e.stopPropagation();
     const href = (e.currentTarget as HTMLAnchorElement).getAttribute('href');
     if (href) {
-      window.location.href = href;
+      router.push(href);
     }
   };
 
