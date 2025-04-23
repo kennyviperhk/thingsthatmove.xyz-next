@@ -44,6 +44,7 @@ const GallerySection = styled.section`
   margin-right: -50vw;
   height: 40vh;
   overflow: visible;
+  margin-bottom:50px;
 `;
 
 const ContentWrapper = styled.div`
@@ -114,12 +115,12 @@ const SwiperContainer = styled.div`
 const PaginationContainer = styled.div`
   width: 100%;
   background: transparent;
-  padding: 1rem 0;
+  padding: 1rem 0px;
   display: flex;
   justify-content: center;
   align-items: center;
   mix-blend-mode: difference;
-
+  margin-top:10px;
   .swiper-custom-pagination {
     display: flex;
     justify-content: center;
@@ -303,12 +304,12 @@ export default function SwipeGallery({ data }: SwipeGalleryProps) {
               el: '.swiper-custom-pagination',
             }}
             loop={true}
-            spaceBetween={20}
+            spaceBetween={10}
             breakpoints={{
               // when window width is >= 768px (desktop)
               768: {
                 slidesPerView: 2.5,
-                spaceBetween: 20
+                spaceBetween: 10
               },
               // when window width is < 768px (mobile)
               0: {

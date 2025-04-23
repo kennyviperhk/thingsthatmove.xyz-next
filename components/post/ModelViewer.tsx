@@ -15,7 +15,7 @@ const ModelSection = styled.section`
   max-width: 1200px;
   margin: 4rem auto;
   padding: 0 1rem;
-  aspect-ratio: 16/9;
+
   position: relative;
 
   @media (min-width: 768px) {

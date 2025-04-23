@@ -48,7 +48,6 @@ const GallerySection = styled.section`
 const MediaContainer = styled.div`
   width: 100%;
   position: relative;
-  aspect-ratio: 16/9;
   background: #000;
   overflow: hidden;
 `;

@@ -104,6 +104,18 @@ const ProjectsGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 2rem;
   margin-top: 2rem;
+  position: relative;
+`;
+
+const fadeInScale = keyframes`
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 `;
 
 const ProjectCard = styled(Link)`
@@ -115,6 +127,9 @@ const ProjectCard = styled(Link)`
   transition: transform 0.2s ease;
   backdrop-filter: blur(10px);
   display: block;
+  animation: ${fadeInScale} 0.7s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+  animation-delay: var(--random-delay);
+  opacity: 0;
   
   &:hover {
     transform: translateY(-4px);
@@ -205,9 +220,9 @@ export default function ProjectsPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const categories = [
-    { id: 'interactive-digital', label: 'Interactive Digital' },
+    { id: 'interactive-digital', label: 'Interactive & Digital' },
     { id: 'kinetics-robotics', label: 'Kinetics & Robotics' },
-    { id: 'tech-research', label: 'Tech Research' }
+    { id: 'tech-research', label: 'Art, Tech & Research' }
   ];
 
   const filterProjects = useCallback((category: string | null) => {
@@ -370,12 +385,17 @@ export default function ProjectsPage() {
           </InitialLoadingContainer>
         ) : (
           <ProjectsGrid>
-            {filteredProjects.map((project) => {
+            {filteredProjects.map((project, index) => {
               const imageUrl = project._embedded?.['wp:featuredmedia']?.[0]?.source_url;
               const mediaState = imageUrl ? mediaStates[imageUrl] : null;
+              const randomDelay = Math.random() * 0.5; // Random delay between 0 and 0.3 seconds
 
               return (
-                <ProjectCard key={project.id} href={`/post/${project.slug}`}>
+                <ProjectCard 
+                  key={`${activeCategory || 'all'}-${project.id}`} 
+                  href={`/post/${project.slug}`}
+                  style={{ '--random-delay': `${randomDelay}s` } as React.CSSProperties}
+                >
                   {imageUrl ? (
                     mediaState?.isLoading ? (
                       <LoadingContainer>
@@ -402,9 +422,7 @@ export default function ProjectsPage() {
                     <ProjectTitle 
                       dangerouslySetInnerHTML={{ __html: project.title.rendered }} 
                     />
-                    <ProjectExcerpt
-                      dangerouslySetInnerHTML={{ __html: project.excerpt.rendered }}
-                    />
+
                   </ProjectContent>
                 </ProjectCard>
               );
