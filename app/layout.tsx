@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Script from 'next/script';
 import dynamic from 'next/dynamic';
+import { Analytics } from '@vercel/analytics/react';
 import StyledComponentsRegistry from './registry';
 import { GlobalStyles } from './styles/globalStyles';
 import LayoutContent from './LayoutContent';
@@ -93,6 +94,7 @@ export default function RootLayout({
           <LayoutContent>
             {children}
           </LayoutContent>
+          <Analytics />
         </StyledComponentsRegistry>
       </body>
     </html>
